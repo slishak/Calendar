@@ -332,4 +332,12 @@ class Config(context: Context) : BaseConfig(context) {
         get() = prefs.getBoolean(LAST_USED_SHOW_LIST_WIDGET_HEADER, true)
         set(lastUsedShowListWidgetHeader) = prefs.edit()
             .putBoolean(LAST_USED_SHOW_LIST_WIDGET_HEADER, lastUsedShowListWidgetHeader).apply()
+
+    var blockMonthViewStartHour: Int
+        get() = prefs.getInt(BLOCK_MONTH_VIEW_START_HOUR, 0)
+        set(v) = prefs.edit().putInt(BLOCK_MONTH_VIEW_START_HOUR, v).apply()
+
+    var blockMonthViewEndHour: Int
+        get() = prefs.getInt(BLOCK_MONTH_VIEW_END_HOUR, 24)
+        set(v) = prefs.edit().putInt(BLOCK_MONTH_VIEW_END_HOUR, v).apply()
 }

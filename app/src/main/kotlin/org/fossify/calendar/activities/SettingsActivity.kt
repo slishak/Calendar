@@ -194,6 +194,8 @@ class SettingsActivity : SimpleActivity() {
         setupReplaceDescription()
         setupWeekNumbers()
         setupShowGrid()
+        setupBlockMonthStartHour()
+        setupBlockMonthEndHour()
         setupWeeklyStart()
         setupMidnightSpanEvents()
         setupAllowCustomizeDayCount()
@@ -622,6 +624,30 @@ class SettingsActivity : SimpleActivity() {
         settingsShowGridHolder.setOnClickListener {
             settingsShowGrid.toggle()
             config.showGrid = settingsShowGrid.isChecked
+        }
+    }
+
+    private fun setupBlockMonthStartHour() = binding.apply {
+        settingsBlockMonthStartHour.text = getHoursString(config.blockMonthViewStartHour)
+        settingsBlockMonthStartHourHolder.setOnClickListener {
+            val items = ArrayList<RadioItem>()
+            (0..23).mapTo(items) { RadioItem(it, getHoursString(it)) }
+            RadioGroupDialog(activity = this@SettingsActivity, items = items, checkedItemId = config.blockMonthViewStartHour) {
+                config.blockMonthViewStartHour = it as Int
+                settingsBlockMonthStartHour.text = getHoursString(it)
+            }
+        }
+    }
+
+    private fun setupBlockMonthEndHour() = binding.apply {
+        settingsBlockMonthEndHour.text = getHoursString(config.blockMonthViewEndHour)
+        settingsBlockMonthEndHourHolder.setOnClickListener {
+            val items = ArrayList<RadioItem>()
+            (1..24).mapTo(items) { RadioItem(it, getHoursString(it)) }
+            RadioGroupDialog(activity = this@SettingsActivity, items = items, checkedItemId = config.blockMonthViewEndHour) {
+                config.blockMonthViewEndHour = it as Int
+                settingsBlockMonthEndHour.text = getHoursString(it)
+            }
         }
     }
 

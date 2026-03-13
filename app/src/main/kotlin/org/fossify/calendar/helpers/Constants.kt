@@ -51,6 +51,7 @@ const val WEEKLY_VIEW = 4
 const val DAILY_VIEW = 5
 const val LAST_VIEW = 6
 const val MONTHLY_DAILY_VIEW = 7
+const val BLOCK_MONTH_VIEW = 8
 
 const val REMINDER_OFF = -1
 const val REMINDER_DEFAULT_VALUE = "$REMINDER_OFF,$REMINDER_OFF,$REMINDER_OFF"
@@ -97,6 +98,8 @@ const val VIEW = "view"
 const val LAST_EVENT_REMINDER_MINUTES = "reminder_minutes"
 const val LAST_EVENT_REMINDER_MINUTES_2 = "reminder_minutes_2"
 const val LAST_EVENT_REMINDER_MINUTES_3 = "reminder_minutes_3"
+const val BLOCK_MONTH_VIEW_START_HOUR = "block_month_view_start_hour"
+const val BLOCK_MONTH_VIEW_END_HOUR = "block_month_view_end_hour"
 const val DISPLAY_CALENDARS = "display_event_types"
 const val QUICK_FILTER_CALENDARS = "quick_filter_event_types"
 const val LIST_WIDGET_VIEW_TO_OPEN = "list_widget_view_to_open"
