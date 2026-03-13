@@ -1441,9 +1441,7 @@ class EventActivity : SimpleActivity() {
             true
         }
 
-        eventColorImage.beVisibleIf(canCustomizeColors)
         eventColorHolder.beVisibleIf(canCustomizeColors)
-        eventColorDivider.beVisibleIf(canCustomizeColors)
         if (canCustomizeColors) {
             updateEventColorInfo(defaultColor = calendar.color)
         }
@@ -2413,8 +2411,7 @@ class EventActivity : SimpleActivity() {
             eventAttendeesImage,
             eventStatusImage,
             eventAccessLevelImage,
-            eventAvailabilityImage,
-            eventColorImage
+            eventAvailabilityImage
         ).forEach {
             it.applyColorFilter(textColor)
         }

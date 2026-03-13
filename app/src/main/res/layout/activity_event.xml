@@ -50,11 +50,84 @@
                 android:textCursorDrawable="@null"
                 android:textSize="@dimen/day_text_size" />
 
+            <!-- Calendar + Color row (compact, at top of form) -->
+            <LinearLayout
+                android:id="@+id/event_calendar_color_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/event_title"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/event_calendar_image"
+                    android:layout_width="@dimen/smaller_icon_size"
+                    android:layout_height="@dimen/smaller_icon_size"
+                    android:layout_marginStart="@dimen/normal_margin"
+                    android:padding="@dimen/medium_margin"
+                    android:src="@drawable/ic_calendar_vector" />
+
+                <RelativeLayout
+                    android:id="@+id/event_calendar_holder"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="?attr/selectableItemBackground">
+
+                    <org.fossify.commons.views.MyTextView
+                        android:id="@+id/event_calendar_title"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/small_margin"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:paddingStart="0dp"
+                        android:paddingTop="@dimen/medium_margin"
+                        android:paddingEnd="@dimen/small_margin"
+                        android:paddingBottom="@dimen/tiny_margin"
+                        android:textSize="@dimen/day_text_size"
+                        tools:text="@string/regular_event" />
+
+                    <org.fossify.commons.views.MyTextView
+                        android:id="@+id/event_calendar_subtitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@+id/event_calendar_title"
+                        android:layout_marginStart="@dimen/small_margin"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:paddingStart="0dp"
+                        android:paddingEnd="@dimen/small_margin"
+                        android:paddingBottom="@dimen/medium_margin"
+                        android:textSize="@dimen/meta_text_size"
+                        tools:text="@string/offline_never_synced" />
+
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/event_color_holder"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="@dimen/normal_margin"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="@dimen/medium_margin">
+
+                    <ImageView
+                        android:id="@+id/event_color"
+                        android:layout_width="@dimen/color_sample_size"
+                        android:layout_height="@dimen/color_sample_size"
+                        android:layout_centerInParent="true"
+                        android:clickable="false" />
+
+                </RelativeLayout>
+
+            </LinearLayout>
+
             <org.fossify.commons.views.MyAutoCompleteTextView
                 android:id="@+id/event_location"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/event_title"
+                android:layout_below="@+id/event_calendar_color_row"
                 android:layout_marginStart="@dimen/activity_margin"
                 android:layout_marginTop="@dimen/activity_margin"
                 android:layout_toStartOf="@+id/event_show_on_map"
@@ -576,117 +649,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/divider_height"
                 android:layout_below="@+id/event_availability"
-                android:layout_marginTop="@dimen/medium_margin"
-                android:background="@color/divider_grey"
-                android:importantForAccessibility="no" />
-
-            <ImageView
-                android:id="@+id/event_calendar_image"
-                android:layout_width="@dimen/smaller_icon_size"
-                android:layout_height="@dimen/smaller_icon_size"
-                android:layout_below="@+id/event_availability_divider"
-                android:layout_alignTop="@+id/event_calendar_holder"
-                android:layout_alignEnd="@+id/event_time_image"
-                android:layout_alignBottom="@+id/event_calendar_holder"
-                android:layout_marginStart="@dimen/normal_margin"
-                android:padding="@dimen/medium_margin"
-                android:src="@drawable/ic_calendar_vector" />
-
-            <RelativeLayout
-                android:id="@+id/event_calendar_holder"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_below="@+id/event_availability_divider"
-                android:layout_toEndOf="@+id/event_calendar_image"
-                android:background="?attr/selectableItemBackground">
-
-                <org.fossify.commons.views.MyTextView
-                    android:id="@+id/event_calendar_title"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/small_margin"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:paddingStart="0dp"
-                    android:paddingTop="@dimen/medium_margin"
-                    android:paddingEnd="@dimen/activity_margin"
-                    android:paddingBottom="@dimen/tiny_margin"
-                    android:textSize="@dimen/day_text_size"
-                    tools:text="@string/regular_event" />
-
-                <org.fossify.commons.views.MyTextView
-                    android:id="@+id/event_calendar_subtitle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_below="@+id/event_calendar_title"
-                    android:layout_marginStart="@dimen/small_margin"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:paddingStart="0dp"
-                    android:paddingEnd="@dimen/medium_margin"
-                    android:paddingBottom="@dimen/medium_margin"
-                    android:textSize="@dimen/meta_text_size"
-                    tools:text="@string/offline_never_synced" />
-
-            </RelativeLayout>
-
-            <ImageView
-                android:id="@+id/calendar_divider"
-                android:layout_width="match_parent"
-                android:layout_height="@dimen/divider_height"
-                android:layout_below="@+id/event_calendar_holder"
-                android:background="@color/divider_grey"
-                android:importantForAccessibility="no" />
-
-            <ImageView
-                android:id="@+id/event_color_image"
-                android:layout_width="@dimen/smaller_icon_size"
-                android:layout_height="@dimen/smaller_icon_size"
-                android:layout_below="@+id/calendar_divider"
-                android:layout_alignTop="@+id/event_color_holder"
-                android:layout_alignBottom="@+id/event_color_holder"
-                android:layout_marginStart="@dimen/normal_margin"
-                android:padding="@dimen/medium_margin"
-                android:src="@drawable/ic_color_outline_vector" />
-
-            <RelativeLayout
-                android:id="@+id/event_color_holder"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_below="@+id/calendar_divider"
-                android:layout_marginTop="@dimen/medium_margin"
-                android:layout_marginBottom="@dimen/medium_margin"
-                android:layout_toEndOf="@+id/event_color_image"
-                android:background="?attr/selectableItemBackground">
-
-                <org.fossify.commons.views.MyTextView
-                    android:id="@+id/event_color_text"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/small_margin"
-                    android:layout_marginEnd="@dimen/medium_margin"
-                    android:layout_toStartOf="@+id/event_color"
-                    android:paddingTop="@dimen/normal_margin"
-                    android:paddingBottom="@dimen/normal_margin"
-                    android:text="@string/event_color"
-                    android:textSize="@dimen/day_text_size" />
-
-                <ImageView
-                    android:id="@+id/event_color"
-                    android:layout_width="@dimen/color_sample_size"
-                    android:layout_height="@dimen/color_sample_size"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:layout_marginEnd="@dimen/activity_margin"
-                    android:clickable="false" />
-
-            </RelativeLayout>
-
-            <ImageView
-                android:id="@+id/event_color_divider"
-                android:layout_width="match_parent"
-                android:layout_height="@dimen/divider_height"
-                android:layout_below="@+id/event_color_image"
                 android:layout_marginTop="@dimen/medium_margin"
                 android:background="@color/divider_grey"
                 android:importantForAccessibility="no" />
