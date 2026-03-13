@@ -20,6 +20,8 @@ import org.fossify.calendar.helpers.getActivityToOpen
 import org.fossify.calendar.models.Event
 import org.fossify.commons.extensions.beGoneIf
 import org.fossify.commons.extensions.beVisibleIf
+import org.fossify.commons.extensions.getProperBackgroundColor
+import org.fossify.commons.extensions.getProperTextColor
 
 class DayAgendaBottomSheet : BottomSheetDialogFragment() {
 
@@ -41,6 +43,12 @@ class DayAgendaBottomSheet : BottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val bgColor = requireContext().getProperBackgroundColor()
+        val textColor = requireContext().getProperTextColor()
+        binding.root.setBackgroundColor(bgColor)
+        binding.dayAgendaAdd.setColorFilter(textColor)
+        binding.dayAgendaTitle.setTextColor(textColor)
+
         val dayCode = requireArguments().getString(DAY_CODE)!!
 
         binding.dayAgendaList.layoutManager = LinearLayoutManager(requireContext())
