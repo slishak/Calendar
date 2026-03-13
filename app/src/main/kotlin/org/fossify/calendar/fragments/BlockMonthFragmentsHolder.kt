@@ -21,6 +21,7 @@ import org.fossify.calendar.interfaces.NavigationListener
 import org.fossify.commons.extensions.beGone
 import org.fossify.commons.extensions.getAlertDialogBuilder
 import org.fossify.commons.extensions.getProperBackgroundColor
+import org.fossify.commons.extensions.getProperTextColor
 import org.fossify.commons.extensions.setupDialogStuff
 import org.joda.time.DateTime
 
@@ -49,6 +50,7 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentBlockMonthsHolderBinding.inflate(inflater, container, false)
         binding.root.background = ColorDrawable(requireContext().getProperBackgroundColor())
+        binding.blockMonthHeaderTitle.setTextColor(requireContext().getProperTextColor())
         recyclerView = binding.fragmentBlockMonthsRecycler
         setupFragment()
         return binding.root
