@@ -33,6 +33,7 @@ import org.fossify.calendar.extensions.launchNewTaskIntent
 import org.fossify.calendar.extensions.seconds
 import org.fossify.calendar.extensions.tryImportEventsFromFile
 import org.fossify.calendar.extensions.updateWidgets
+import org.fossify.calendar.fragments.BlockMonthFragmentsHolder
 import org.fossify.calendar.fragments.DayFragmentsHolder
 import org.fossify.calendar.fragments.EventListFragment
 import org.fossify.calendar.fragments.MonthDayFragmentsHolder
@@ -61,6 +62,7 @@ import org.fossify.calendar.helpers.IcsImporter.ImportResult
 import org.fossify.calendar.helpers.LAST_VIEW
 import org.fossify.calendar.helpers.MAX_SEARCH_YEAR
 import org.fossify.calendar.helpers.MIN_EVENTS_TRESHOLD
+import org.fossify.calendar.helpers.BLOCK_MONTH_VIEW
 import org.fossify.calendar.helpers.MONTHLY_DAILY_VIEW
 import org.fossify.calendar.helpers.MONTHLY_VIEW
 import org.fossify.calendar.helpers.OTHER_EVENT
@@ -604,6 +606,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
             RadioItem(WEEKLY_VIEW, getString(R.string.weekly_view)),
             RadioItem(MONTHLY_VIEW, getString(R.string.monthly_view)),
             RadioItem(MONTHLY_DAILY_VIEW, getString(R.string.monthly_daily_view)),
+            RadioItem(BLOCK_MONTH_VIEW, getString(R.string.block_month_view)),
             RadioItem(YEARLY_VIEW, getString(R.string.yearly_view)),
             RadioItem(EVENTS_LIST_VIEW, getString(R.string.simple_event_list))
         )
@@ -1108,9 +1111,9 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         val fragmentDate = fragment.getCurrentDate()
         val viewOrder = arrayListOf(DAILY_VIEW, WEEKLY_VIEW, MONTHLY_VIEW, YEARLY_VIEW)
         val currentViewIndex =
-            viewOrder.indexOf(if (currentView == MONTHLY_DAILY_VIEW) MONTHLY_VIEW else currentView)
+            viewOrder.indexOf(if (currentView == MONTHLY_DAILY_VIEW || currentView == BLOCK_MONTH_VIEW) MONTHLY_VIEW else currentView)
         val newViewIndex =
-            viewOrder.indexOf(if (newView == MONTHLY_DAILY_VIEW) MONTHLY_VIEW else newView)
+            viewOrder.indexOf(if (newView == MONTHLY_DAILY_VIEW || newView == BLOCK_MONTH_VIEW) MONTHLY_VIEW else newView)
 
         return if (fragmentDate != null && currentViewIndex <= newViewIndex) {
             getDateCodeFormatForView(newView, fragmentDate)
@@ -1139,7 +1142,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
                 fixedDayCode ?: getFirstDayOfWeek(DateTime())
             )
 
-            MONTHLY_VIEW, MONTHLY_DAILY_VIEW -> bundle.putString(
+            MONTHLY_VIEW, MONTHLY_DAILY_VIEW, BLOCK_MONTH_VIEW -> bundle.putString(
                 DAY_CODE,
                 fixedDayCode ?: Formatter.getTodayCode()
             )
@@ -1274,6 +1277,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         DAILY_VIEW -> DayFragmentsHolder()
         MONTHLY_VIEW -> MonthFragmentsHolder()
         MONTHLY_DAILY_VIEW -> MonthDayFragmentsHolder()
+        BLOCK_MONTH_VIEW -> BlockMonthFragmentsHolder()
         YEARLY_VIEW -> YearFragmentsHolder()
         EVENTS_LIST_VIEW -> EventListFragment()
         else -> WeekFragmentsHolder()
