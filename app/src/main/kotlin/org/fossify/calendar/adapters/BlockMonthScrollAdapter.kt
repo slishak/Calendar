@@ -72,20 +72,21 @@ class BlockMonthScrollAdapter(
     }
 
     /**
-     * Assigns each week row to the month where the majority (≥ 4 of 7) of its days belong.
-     * Leading and trailing rows where this month is the minority are trimmed, so every week
-     * appears in exactly one month and no week is ever duplicated across adjacent months.
+     * Trims leading/trailing rows where this month is the minority (< 4 of 7 days belong here),
+     * but never below 5 rows (35 days) so every month always fills a consistent 5-week grid.
+     * Border rows kept to preserve the 5-row minimum will appear as inactive (shaded) cells.
      */
     private fun trimRows(days: ArrayList<DayMonthly>): ArrayList<DayMonthly> {
         val result = days.toMutableList()
         val majority = COLUMN_COUNT / 2 + 1  // 4 for a 7-day week
+        val minDays = 5 * COLUMN_COUNT        // always keep at least 5 rows
 
-        while (result.size >= COLUMN_COUNT) {
+        while (result.size > minDays) {
             if (result.take(COLUMN_COUNT).count { it.isThisMonth } < majority) {
                 repeat(COLUMN_COUNT) { result.removeFirst() }
             } else break
         }
-        while (result.size >= COLUMN_COUNT) {
+        while (result.size > minDays) {
             if (result.takeLast(COLUMN_COUNT).count { it.isThisMonth } < majority) {
                 repeat(COLUMN_COUNT) { result.removeLast() }
             } else break

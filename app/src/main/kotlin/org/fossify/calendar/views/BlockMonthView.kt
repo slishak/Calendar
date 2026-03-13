@@ -35,7 +35,7 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
         private const val ALL_DAY_FRACTION = 0.12f  // fraction of content height per all-day track
         private const val MIN_BLOCK_HEIGHT_FOR_TEXT = 14f
         // Cell background shading (textColor overlay, so it works in both light and dark themes)
-        private const val PAST_DAY_DIM_ALPHA = 0.07f
+        private const val PAST_DAY_DIM_ALPHA = 0.02f
         private const val INACTIVE_MONTH_DIM_ALPHA = 0.16f
     }
 
