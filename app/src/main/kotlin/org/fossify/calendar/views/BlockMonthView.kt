@@ -380,12 +380,13 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
             val left = cellLeft + pad + layout.col * colW
             val right = left + colW - pad
 
+            val resolvedColor = resolveEventColor(event)
             bgRectF.set(left, top, right, bot)
-            eventPaint.color = resolveEventColor(event)
+            eventPaint.color = resolvedColor
             canvas.drawRoundRect(bgRectF, BG_CORNER_RADIUS, BG_CORNER_RADIUS, eventPaint)
 
             if (blockH >= MIN_BLOCK_HEIGHT_FOR_TEXT) {
-                drawBlockTitle(canvas, event.title, left, top + 1f, colW - pad, blockH)
+                drawBlockTitle(canvas, event.title, left, top + 1f, colW - pad, blockH, Color.alpha(resolvedColor))
             }
         }
     }
@@ -465,13 +466,14 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
 
                 if (bot <= top || right <= left) continue
 
+                val resolvedColor = resolveEventColor(span.event)
                 bgRectF.set(left, top, right, bot)
-                eventPaint.color = resolveEventColor(span.event)
+                eventPaint.color = resolvedColor
                 canvas.drawRoundRect(bgRectF, BG_CORNER_RADIUS, BG_CORNER_RADIUS, eventPaint)
 
                 val barH = bot - top
                 if (barH >= MIN_BLOCK_HEIGHT_FOR_TEXT) {
-                    drawBlockTitle(canvas, span.event.title, left + pad, top + 1f, right - left - pad * 2, barH)
+                    drawBlockTitle(canvas, span.event.title, left + pad, top + 1f, right - left - pad * 2, barH, Color.alpha(resolvedColor))
                 }
             }
         }
@@ -488,14 +490,18 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
         return if (dimPastEvents && event.isPastEvent) base.adjustAlpha(MEDIUM_ALPHA) else base
     }
 
-    private fun drawBlockTitle(canvas: Canvas, title: String, left: Float, top: Float, availW: Float, availH: Float) {
+    private fun drawBlockTitle(canvas: Canvas, title: String, left: Float, top: Float, availW: Float, availH: Float, alpha: Int = 255) {
         if (availW < 6f || availH < 6f) return
         val paint = eventTitlePaint
         paint.color = Color.WHITE
         val ellipsized = TextUtils.ellipsize(title, paint, availW - 3f, TextUtils.TruncateAt.END)
         val textY = top + paint.textSize
         if (textY <= top + availH) {
+            // saveLayerAlpha composites everything — including emoji bitmaps — at the given
+            // opacity, so emoji are dimmed consistently with the rest of the text.
+            if (alpha < 255) canvas.saveLayerAlpha(left, top, left + availW, textY + paint.descent(), alpha)
             canvas.drawText(title, 0, ellipsized.length, left + 2f, textY, paint)
+            if (alpha < 255) canvas.restore()
         }
     }
 
