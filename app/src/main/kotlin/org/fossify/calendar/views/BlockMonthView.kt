@@ -63,6 +63,11 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
 
     /** Set to false when an external BlockMonthHeaderView provides the weekday labels. */
     var showWeekDayHeader = true
+        set(value) {
+            field = value
+            weekDaysLetterHeight = if (value) fullWeekDaysLetterHeight else 0f
+            invalidate()
+        }
 
     /**
      * 6-digit month code (YYYYMM) of the currently active/centred month in the scroll view.
@@ -72,11 +77,6 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
     var activeMonthCode: String = ""
         set(value) {
             field = value
-            invalidate()
-        }
-        set(value) {
-            field = value
-            weekDaysLetterHeight = if (value) fullWeekDaysLetterHeight else 0f
             invalidate()
         }
 
