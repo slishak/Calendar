@@ -20,6 +20,8 @@ class BlockMonthScrollAdapter(
     private val onDayClick: (DayMonthly) -> Unit
 ) : RecyclerView.Adapter<BlockMonthScrollAdapter.ViewHolder>() {
 
+    var activeMonthCode: String = ""
+
     private val mainHandler = Handler(Looper.getMainLooper())
 
     inner class ViewHolder(val binding: ItemBlockMonthBinding) : RecyclerView.ViewHolder(binding.root) {
@@ -42,6 +44,7 @@ class BlockMonthScrollAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val code = codes[position]
         holder.boundCode = code
+        holder.binding.blockMonthView.activeMonthCode = activeMonthCode
         holder.binding.blockMonthView.updateDays(ArrayList())
         holder.binding.blockMonthView.setDayClickCallback(onDayClick)
 
@@ -56,6 +59,7 @@ class BlockMonthScrollAdapter(
                 val trimmed = trimRows(days)
                 mainHandler.post {
                     if (holder.boundCode == code) {
+                        holder.binding.blockMonthView.activeMonthCode = activeMonthCode
                         holder.binding.blockMonthView.updateDays(trimmed)
                     }
                 }

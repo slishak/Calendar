@@ -63,6 +63,17 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
 
     /** Set to false when an external BlockMonthHeaderView provides the weekday labels. */
     var showWeekDayHeader = true
+
+    /**
+     * 6-digit month code (YYYYMM) of the currently active/centred month in the scroll view.
+     * When non-empty, overrides [DayMonthly.isThisMonth] so that overflow days are dimmed
+     * relative to the scrolled active month rather than the block's own target month.
+     */
+    var activeMonthCode: String = ""
+        set(value) {
+            field = value
+            invalidate()
+        }
         set(value) {
             field = value
             weekDaysLetterHeight = if (value) fullWeekDaysLetterHeight else 0f
@@ -456,7 +467,8 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
             highlightWeekends && day.isWeekend -> weekendsTextColor
             else -> textColor
         }
-        if (!day.isThisMonth) color = color.adjustAlpha(MEDIUM_ALPHA)
+        val isActive = if (activeMonthCode.isNotEmpty()) day.code.getMonthCode() == activeMonthCode else day.isThisMonth
+        if (!isActive) color = color.adjustAlpha(MEDIUM_ALPHA)
         return getColoredPaint(color, headerTextPaint)
     }
 

@@ -71,6 +71,7 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
                     .show(parentFragmentManager, "day_agenda")
             }
         )
+        adapter.activeMonthCode = codes[defaultMonthlyPage].getMonthCode()
 
         recyclerView.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -83,6 +84,7 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
                         if (newCode != currentDayCode) {
                             currentDayCode = newCode
                             updateHeaderTitle(newCode)
+                            updateActiveMonthHighlight(newCode.getMonthCode())
                             val shouldBeVisible = shouldGoToTodayBeVisible()
                             if (isGoToTodayVisible != shouldBeVisible) {
                                 (activity as? MainActivity)?.toggleGoToTodayVisibility(shouldBeVisible)
@@ -168,6 +170,16 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
         val last = lm.findLastVisibleItemPosition()
         if (first >= 0 && last >= 0) {
             adapter.notifyItemRangeChanged(first, last - first + 1)
+        }
+    }
+
+    private fun updateActiveMonthHighlight(monthCode: String) {
+        adapter.activeMonthCode = monthCode
+        for (i in 0 until recyclerView.childCount) {
+            val vh = recyclerView.getChildViewHolder(recyclerView.getChildAt(i)) as? BlockMonthScrollAdapter.ViewHolder
+            vh?.binding?.blockMonthView?.let {
+                it.activeMonthCode = monthCode
+            }
         }
     }
 
