@@ -22,14 +22,15 @@ import org.joda.time.DateTime
  * Custom View for the Block Month View (Business Calendar 2 style).
  * Draws a 6-row × 7-column monthly grid where each day cell shows events as
  * proportionally-sized colored blocks based on the configured visible time window.
- * Concurrent events are rendered side-by-side using a greedy column algorithm.
+ * Concurrent timed events are rendered side-by-side using a greedy column algorithm.
+ * Multi-day all-day events are drawn as spanning bars across day cell boundaries.
  */
 class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(context, attrs, defStyle) {
 
     companion object {
         private const val BG_CORNER_RADIUS = 3f
         private const val HEADER_FRACTION = 0.22f   // fraction of day height used for the day number
-        private const val ALL_DAY_FRACTION = 0.12f  // fraction of content height for all-day events
+        private const val ALL_DAY_FRACTION = 0.12f  // fraction of content height per all-day track
         private const val MIN_BLOCK_HEIGHT_FOR_TEXT = 14f
     }
 
@@ -64,6 +65,11 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
     private val dayTextRect = Rect()
 
     private var dayClickCallback: ((DayMonthly) -> Unit)? = null
+
+    // Pre-computed per-row all-day spanning data
+    private data class AllDaySpan(val event: Event, val startCol: Int, val endCol: Int, val track: Int)
+    private val allDaySpansPerRow = Array(ROW_COUNT) { mutableListOf<AllDaySpan>() }
+    private val maxTracksPerRow = IntArray(ROW_COUNT)
 
     init {
         primaryColor = context.getProperPrimaryColor()
@@ -138,6 +144,7 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
         weekendsTextColor = config.highlightWeekendsColor
         initWeekDayLetters()
         setupCurrentDayOfWeekIndex()
+        computeAllDaySpans()
         invalidate()
     }
 
@@ -170,6 +177,7 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
         for (i in days.indices) {
             drawDay(canvas, days[i], i % COLUMN_COUNT, i / COLUMN_COUNT)
         }
+        drawAllDaySpans(canvas)
     }
 
     private fun measureDaySize(canvas: Canvas) {
@@ -240,44 +248,38 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
 
         canvas.drawText(dayNumStr, numX, numY, numPaint)
 
-        if (day.dayEvents.isNotEmpty() && contentHeight > 4f) {
-            drawDayEvents(canvas, day, cellLeft, contentTop, contentHeight)
+        // Only draw timed events here; all-day events are drawn by drawAllDaySpans()
+        val timedEvents = day.dayEvents.filter { !it.getIsAllDay() }
+        if (timedEvents.isNotEmpty() && contentHeight > 4f) {
+            drawTimedEvents(canvas, timedEvents, cellLeft, contentTop, contentHeight, row)
         }
     }
 
-    private fun drawDayEvents(canvas: Canvas, day: DayMonthly, cellLeft: Float, contentTop: Float, contentHeight: Float) {
+    /**
+     * Draws timed (non-all-day) events for a single day cell. The all-day band height
+     * is reserved at the top based on the row's all-day track count, pushing timed
+     * events downward consistently across the row.
+     */
+    private fun drawTimedEvents(
+        canvas: Canvas,
+        timedEvents: List<Event>,
+        cellLeft: Float,
+        contentTop: Float,
+        contentHeight: Float,
+        row: Int
+    ) {
         val totalMinutes = ((endHour - startHour) * 60).toFloat()
         if (totalMinutes <= 0f) return
 
         val pad = 1.5f
-        val allDayEvents = day.dayEvents.filter { it.getIsAllDay() }
-        val timedEvents = day.dayEvents.filter { !it.getIsAllDay() }
 
-        // All-day band
-        val allDayBandHeight = if (allDayEvents.isNotEmpty()) {
-            minOf(contentHeight * ALL_DAY_FRACTION * allDayEvents.size, contentHeight * 0.3f)
-        } else {
-            0f
-        }
-        val timedTop = contentTop + allDayBandHeight
-        val timedHeight = contentHeight - allDayBandHeight
+        // Reserve space for the all-day band (same calculation used in drawAllDaySpans)
+        val maxTracks = maxTracksPerRow[row]
+        val allDayBandH = if (maxTracks > 0) minOf(contentHeight * ALL_DAY_FRACTION * maxTracks, contentHeight * 0.3f) else 0f
+        val timedTop = contentTop + allDayBandH
+        val timedHeight = contentHeight - allDayBandH
 
-        // Draw all-day events as stacked thin bars
-        if (allDayEvents.isNotEmpty()) {
-            val barH = allDayBandHeight / allDayEvents.size - pad
-            allDayEvents.forEachIndexed { idx, event ->
-                val top = contentTop + idx * (barH + pad)
-                val bot = top + barH
-                bgRectF.set(cellLeft + pad, top, cellLeft + dayWidth - pad, bot)
-                eventPaint.color = resolveEventColor(event)
-                canvas.drawRoundRect(bgRectF, BG_CORNER_RADIUS, BG_CORNER_RADIUS, eventPaint)
-                if (barH >= MIN_BLOCK_HEIGHT_FOR_TEXT) {
-                    drawBlockTitle(canvas, event.title, cellLeft + pad, top, dayWidth - pad * 2, barH)
-                }
-            }
-        }
-
-        if (timedEvents.isEmpty() || timedHeight < 4f) return
+        if (timedHeight < 4f) return
 
         // Layout timed events into columns to handle overlaps.
         // Apply minimum duration before column assignment so zero-duration events
@@ -332,6 +334,104 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
 
             if (blockH >= MIN_BLOCK_HEIGHT_FOR_TEXT) {
                 drawBlockTitle(canvas, event.title, left, top + 1f, colW - pad, blockH)
+            }
+        }
+    }
+
+    /**
+     * Pre-computes spanning data for all-day events across each week row.
+     * Called whenever the days list changes. Assigns each all-day event to a "track"
+     * within each row it occupies, using greedy interval scheduling per row.
+     */
+    private fun computeAllDaySpans() {
+        for (row in 0 until ROW_COUNT) {
+            allDaySpansPerRow[row].clear()
+            maxTracksPerRow[row] = 0
+        }
+        if (days.isEmpty()) return
+
+        // Collect unique all-day events and their start/end cell indices using identity comparison
+        // (MonthlyCalendarImpl reuses the same Event instance across multiple day lists)
+        data class EventRange(val event: Event, val startIdx: Int, val endIdx: Int)
+        val seen = mutableSetOf<Event>()
+        val eventRanges = mutableListOf<EventRange>()
+
+        for (event in days.flatMap { it.dayEvents }) {
+            if (!event.getIsAllDay() || event in seen) continue
+            seen.add(event)
+            val startIdx = days.indexOfFirst { day -> day.dayEvents.any { it === event } }
+            val endIdx = days.indexOfLast { day -> day.dayEvents.any { it === event } }
+            if (startIdx >= 0 && endIdx >= startIdx) {
+                eventRanges.add(EventRange(event, startIdx, endIdx))
+            }
+        }
+
+        // For each row, assign tracks using greedy first-fit interval scheduling
+        for (row in 0 until ROW_COUNT) {
+            val rowStartIdx = row * COLUMN_COUNT
+            val rowEndIdx = rowStartIdx + COLUMN_COUNT - 1
+
+            val rowEvents = eventRanges
+                .filter { it.startIdx <= rowEndIdx && it.endIdx >= rowStartIdx }
+                .sortedWith(compareBy({ it.startIdx }, { -(it.endIdx - it.startIdx) }))
+
+            val trackEnds = mutableListOf<Int>()  // track → last endCol used
+
+            for (range in rowEvents) {
+                val startCol = (range.startIdx - rowStartIdx).coerceIn(0, COLUMN_COUNT - 1)
+                val endCol = (range.endIdx - rowStartIdx).coerceIn(0, COLUMN_COUNT - 1)
+
+                val trackIdx = trackEnds.indexOfFirst { it < startCol }
+                val track = if (trackIdx == -1) {
+                    trackEnds.add(endCol)
+                    trackEnds.size - 1
+                } else {
+                    trackEnds[trackIdx] = endCol
+                    trackIdx
+                }
+                allDaySpansPerRow[row].add(AllDaySpan(range.event, startCol, endCol, track))
+            }
+
+            maxTracksPerRow[row] = allDaySpansPerRow[row].maxOfOrNull { it.track + 1 } ?: 0
+        }
+    }
+
+    /**
+     * Draws all-day events as horizontal spanning bars that cross day-cell boundaries.
+     * Must be called AFTER drawDay() so it draws on top of the cell content.
+     */
+    private fun drawAllDaySpans(canvas: Canvas) {
+        if (dayWidth == 0f || dayHeight == 0f) return
+        val pad = 1.5f
+
+        for (row in 0 until ROW_COUNT) {
+            if (allDaySpansPerRow[row].isEmpty()) continue
+
+            val rowTop = weekDaysLetterHeight + row * dayHeight
+            val headerH = dayHeight * HEADER_FRACTION
+            val contentTop = rowTop + headerH
+            val contentH = dayHeight - headerH
+
+            val maxTracks = maxTracksPerRow[row]
+            val allDayBandH = if (maxTracks > 0) minOf(contentH * ALL_DAY_FRACTION * maxTracks, contentH * 0.3f) else continue
+            val trackH = allDayBandH / maxTracks
+
+            for (span in allDaySpansPerRow[row]) {
+                val left = horizontalOffset + span.startCol * dayWidth + pad
+                val right = horizontalOffset + (span.endCol + 1) * dayWidth - pad
+                val top = contentTop + span.track * trackH + pad
+                val bot = top + trackH - pad * 2
+
+                if (bot <= top || right <= left) continue
+
+                bgRectF.set(left, top, right, bot)
+                eventPaint.color = resolveEventColor(span.event)
+                canvas.drawRoundRect(bgRectF, BG_CORNER_RADIUS, BG_CORNER_RADIUS, eventPaint)
+
+                val barH = bot - top
+                if (barH >= MIN_BLOCK_HEIGHT_FOR_TEXT) {
+                    drawBlockTitle(canvas, span.event.title, left + pad, top + 1f, right - left - pad * 2, barH)
+                }
             }
         }
     }

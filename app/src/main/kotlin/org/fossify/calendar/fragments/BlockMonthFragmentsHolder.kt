@@ -7,10 +7,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.DatePicker
-import androidx.viewpager.widget.ViewPager
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import org.fossify.calendar.activities.MainActivity
-import org.fossify.calendar.adapters.MyBlockMonthPagerAdapter
+import org.fossify.calendar.adapters.BlockMonthScrollAdapter
 import org.fossify.calendar.databinding.FragmentBlockMonthsHolderBinding
+import org.fossify.calendar.dialogs.DayAgendaBottomSheet
 import org.fossify.calendar.extensions.getMonthCode
 import org.fossify.calendar.helpers.BLOCK_MONTH_VIEW
 import org.fossify.calendar.helpers.DAY_CODE
@@ -20,13 +22,14 @@ import org.fossify.commons.extensions.beGone
 import org.fossify.commons.extensions.getAlertDialogBuilder
 import org.fossify.commons.extensions.getProperBackgroundColor
 import org.fossify.commons.extensions.setupDialogStuff
-import org.fossify.commons.views.MyViewPager
 import org.joda.time.DateTime
 
 class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     private val PREFILLED_MONTHS = 251
 
-    private lateinit var viewPager: MyViewPager
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var adapter: BlockMonthScrollAdapter
+    private lateinit var codes: List<String>
     private var defaultMonthlyPage = 0
     private var todayDayCode = ""
     private var currentDayCode = ""
@@ -43,32 +46,45 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val binding = FragmentBlockMonthsHolderBinding.inflate(inflater, container, false)
         binding.root.background = ColorDrawable(requireContext().getProperBackgroundColor())
-        viewPager = binding.fragmentBlockMonthsViewpager
-        viewPager.id = (System.currentTimeMillis() % 100000).toInt()
+        recyclerView = binding.fragmentBlockMonthsRecycler
         setupFragment()
         return binding.root
     }
 
     private fun setupFragment() {
-        val codes = getMonths(currentDayCode)
-        val adapter = MyBlockMonthPagerAdapter(requireActivity().supportFragmentManager, codes, this)
+        codes = getMonths(currentDayCode)
         defaultMonthlyPage = codes.size / 2
 
-        viewPager.apply {
-            this.adapter = adapter
-            addOnPageChangeListener(object : ViewPager.OnPageChangeListener {
-                override fun onPageScrollStateChanged(state: Int) {}
-                override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {}
-                override fun onPageSelected(position: Int) {
-                    currentDayCode = codes[position]
-                    val shouldBeVisible = shouldGoToTodayBeVisible()
-                    if (isGoToTodayVisible != shouldBeVisible) {
-                        (activity as? MainActivity)?.toggleGoToTodayVisibility(shouldBeVisible)
-                        isGoToTodayVisible = shouldBeVisible
+        adapter = BlockMonthScrollAdapter(
+            context = requireContext(),
+            codes = codes,
+            onDayClick = { day ->
+                DayAgendaBottomSheet.newInstance(day.code)
+                    .show(parentFragmentManager, "day_agenda")
+            }
+        )
+
+        recyclerView.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            this.adapter = this@BlockMonthFragmentsHolder.adapter
+            addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    val firstVisible = (recyclerView.layoutManager as LinearLayoutManager)
+                        .findFirstVisibleItemPosition()
+                    if (firstVisible >= 0 && firstVisible < codes.size) {
+                        val newCode = codes[firstVisible]
+                        if (newCode != currentDayCode) {
+                            currentDayCode = newCode
+                            val shouldBeVisible = shouldGoToTodayBeVisible()
+                            if (isGoToTodayVisible != shouldBeVisible) {
+                                (activity as? MainActivity)?.toggleGoToTodayVisibility(shouldBeVisible)
+                                isGoToTodayVisible = shouldBeVisible
+                            }
+                        }
                     }
                 }
             })
-            currentItem = defaultMonthlyPage
+            scrollToPosition(defaultMonthlyPage)
         }
     }
 
@@ -82,11 +98,15 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     }
 
     override fun goLeft() {
-        viewPager.currentItem = viewPager.currentItem - 1
+        val lm = recyclerView.layoutManager as? LinearLayoutManager ?: return
+        val pos = lm.findFirstVisibleItemPosition()
+        if (pos > 0) recyclerView.smoothScrollToPosition(pos - 1)
     }
 
     override fun goRight() {
-        viewPager.currentItem = viewPager.currentItem + 1
+        val lm = recyclerView.layoutManager as? LinearLayoutManager ?: return
+        val pos = lm.findFirstVisibleItemPosition()
+        if (pos < codes.size - 1) recyclerView.smoothScrollToPosition(pos + 1)
     }
 
     override fun goToDateTime(dateTime: DateTime) {
@@ -124,7 +144,12 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     }
 
     override fun refreshEvents() {
-        (viewPager.adapter as? MyBlockMonthPagerAdapter)?.updateCalendars(viewPager.currentItem)
+        val lm = recyclerView.layoutManager as? LinearLayoutManager ?: return
+        val first = lm.findFirstVisibleItemPosition()
+        val last = lm.findLastVisibleItemPosition()
+        if (first >= 0 && last >= 0) {
+            adapter.notifyItemRangeChanged(first, last - first + 1)
+        }
     }
 
     override fun shouldGoToTodayBeVisible() = currentDayCode.getMonthCode() != todayDayCode.getMonthCode()
@@ -132,7 +157,7 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     override fun getNewEventDayCode() = if (shouldGoToTodayBeVisible()) currentDayCode else todayDayCode
 
     override fun printView() {
-        (viewPager.adapter as? MyBlockMonthPagerAdapter)?.printCurrentView(viewPager.currentItem)
+        // Printing not supported for scrollable block month view
     }
 
     override fun getCurrentDate(): DateTime? {
