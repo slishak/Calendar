@@ -53,7 +53,7 @@ class BlockMonthScrollAdapter(
                 checkedEvents: Boolean,
                 currTargetDate: DateTime
             ) {
-                val trimmed = trimTrailingRows(days)
+                val trimmed = trimRows(days)
                 mainHandler.post {
                     if (holder.boundCode == code) {
                         holder.binding.blockMonthView.updateDays(trimmed)
@@ -68,19 +68,23 @@ class BlockMonthScrollAdapter(
     }
 
     /**
-     * Removes trailing week rows that contain no days from the current month.
-     * This prevents the same "overflow" days appearing at the bottom of one month
-     * and again at the top of the next.
+     * Assigns each week row to the month where the majority (≥ 4 of 7) of its days belong.
+     * Leading and trailing rows where this month is the minority are trimmed, so every week
+     * appears in exactly one month and no week is ever duplicated across adjacent months.
      */
-    private fun trimTrailingRows(days: ArrayList<DayMonthly>): ArrayList<DayMonthly> {
+    private fun trimRows(days: ArrayList<DayMonthly>): ArrayList<DayMonthly> {
         val result = days.toMutableList()
+        val majority = COLUMN_COUNT / 2 + 1  // 4 for a 7-day week
+
         while (result.size >= COLUMN_COUNT) {
-            val lastRow = result.takeLast(COLUMN_COUNT)
-            if (lastRow.none { it.isThisMonth }) {
+            if (result.take(COLUMN_COUNT).count { it.isThisMonth } < majority) {
+                repeat(COLUMN_COUNT) { result.removeFirst() }
+            } else break
+        }
+        while (result.size >= COLUMN_COUNT) {
+            if (result.takeLast(COLUMN_COUNT).count { it.isThisMonth } < majority) {
                 repeat(COLUMN_COUNT) { result.removeLast() }
-            } else {
-                break
-            }
+            } else break
         }
         return ArrayList(result)
     }

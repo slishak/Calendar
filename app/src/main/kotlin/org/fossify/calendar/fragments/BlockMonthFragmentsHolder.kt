@@ -77,10 +77,9 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
             this.adapter = this@BlockMonthFragmentsHolder.adapter
             addOnScrollListener(object : RecyclerView.OnScrollListener() {
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    val firstVisible = (recyclerView.layoutManager as LinearLayoutManager)
-                        .findFirstVisibleItemPosition()
-                    if (firstVisible >= 0 && firstVisible < codes.size) {
-                        val newCode = codes[firstVisible]
+                    val pos = centerItemPosition(recyclerView)
+                    if (pos >= 0 && pos < codes.size) {
+                        val newCode = codes[pos]
                         if (newCode != currentDayCode) {
                             currentDayCode = newCode
                             updateHeaderTitle(newCode)
@@ -169,6 +168,18 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
         val last = lm.findLastVisibleItemPosition()
         if (first >= 0 && last >= 0) {
             adapter.notifyItemRangeChanged(first, last - first + 1)
+        }
+    }
+
+    private fun centerItemPosition(recyclerView: RecyclerView): Int {
+        val centerView = recyclerView.findChildViewUnder(
+            recyclerView.width / 2f,
+            recyclerView.height / 2f
+        )
+        return if (centerView != null) {
+            recyclerView.getChildAdapterPosition(centerView)
+        } else {
+            (recyclerView.layoutManager as LinearLayoutManager).findFirstVisibleItemPosition()
         }
     }
 
