@@ -27,6 +27,9 @@ import org.joda.time.DateTime
 class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     private val PREFILLED_MONTHS = 251
 
+    private var _binding: FragmentBlockMonthsHolderBinding? = null
+    private val binding get() = _binding!!
+
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: BlockMonthScrollAdapter
     private lateinit var codes: List<String>
@@ -44,11 +47,16 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        val binding = FragmentBlockMonthsHolderBinding.inflate(inflater, container, false)
+        _binding = FragmentBlockMonthsHolderBinding.inflate(inflater, container, false)
         binding.root.background = ColorDrawable(requireContext().getProperBackgroundColor())
         recyclerView = binding.fragmentBlockMonthsRecycler
         setupFragment()
         return binding.root
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     private fun setupFragment() {
@@ -75,6 +83,7 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
                         val newCode = codes[firstVisible]
                         if (newCode != currentDayCode) {
                             currentDayCode = newCode
+                            updateHeaderTitle(newCode)
                             val shouldBeVisible = shouldGoToTodayBeVisible()
                             if (isGoToTodayVisible != shouldBeVisible) {
                                 (activity as? MainActivity)?.toggleGoToTodayVisibility(shouldBeVisible)
@@ -86,6 +95,17 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
             })
             scrollToPosition(defaultMonthlyPage)
         }
+
+        updateHeaderTitle(codes[defaultMonthlyPage])
+    }
+
+    private fun updateHeaderTitle(code: String) {
+        val b = _binding ?: return
+        val dt = Formatter.getDateTimeFromCode(code)
+        var label = Formatter.getMonthName(requireContext(), dt.monthOfYear)
+        val targetYear = dt.toString("YYYY")
+        if (targetYear != DateTime().toString("YYYY")) label += " $targetYear"
+        b.blockMonthHeaderTitle.text = label
     }
 
     private fun getMonths(code: String): List<String> {

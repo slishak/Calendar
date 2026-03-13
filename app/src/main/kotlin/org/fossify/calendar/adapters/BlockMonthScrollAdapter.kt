@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import org.fossify.calendar.databinding.ItemBlockMonthBinding
+import org.fossify.calendar.helpers.COLUMN_COUNT
 import org.fossify.calendar.helpers.Formatter
 import org.fossify.calendar.helpers.MonthlyCalendarImpl
 import org.fossify.calendar.interfaces.MonthlyCalendar
@@ -27,11 +28,12 @@ class BlockMonthScrollAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemBlockMonthBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        // Make each item fill the full RecyclerView height so one month = one screen
+        // Each item fills the RecyclerView height; weekday header is drawn externally
         val h = parent.height
         if (h > 0) {
             binding.root.layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, h)
         }
+        binding.blockMonthView.showWeekDayHeader = false
         return ViewHolder(binding)
     }
 
@@ -51,18 +53,35 @@ class BlockMonthScrollAdapter(
                 checkedEvents: Boolean,
                 currTargetDate: DateTime
             ) {
+                val trimmed = trimTrailingRows(days)
                 mainHandler.post {
                     if (holder.boundCode == code) {
-                        holder.binding.blockMonthTitle.text = month
-                        holder.binding.blockMonthView.updateDays(days)
+                        holder.binding.blockMonthView.updateDays(trimmed)
                     }
                 }
             }
         }, context)
 
         impl.mTargetDate = Formatter.getDateTimeFromCode(code)
-        // Show empty grid immediately, then async load events
         impl.getDays(false)
         impl.updateMonthlyCalendar(Formatter.getDateTimeFromCode(code))
+    }
+
+    /**
+     * Removes trailing week rows that contain no days from the current month.
+     * This prevents the same "overflow" days appearing at the bottom of one month
+     * and again at the top of the next.
+     */
+    private fun trimTrailingRows(days: ArrayList<DayMonthly>): ArrayList<DayMonthly> {
+        val result = days.toMutableList()
+        while (result.size >= COLUMN_COUNT) {
+            val lastRow = result.takeLast(COLUMN_COUNT)
+            if (lastRow.none { it.isThisMonth }) {
+                repeat(COLUMN_COUNT) { result.removeLast() }
+            } else {
+                break
+            }
+        }
+        return ArrayList(result)
     }
 }
