@@ -27,6 +27,9 @@ import org.joda.time.DateTime
 class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     private val PREFILLED_MONTHS = 251
 
+    private var _binding: FragmentBlockMonthsHolderBinding? = null
+    private val binding get() = _binding!!
+
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: BlockMonthScrollAdapter
     private lateinit var codes: List<String>
@@ -44,11 +47,16 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        val binding = FragmentBlockMonthsHolderBinding.inflate(inflater, container, false)
+        _binding = FragmentBlockMonthsHolderBinding.inflate(inflater, container, false)
         binding.root.background = ColorDrawable(requireContext().getProperBackgroundColor())
         recyclerView = binding.fragmentBlockMonthsRecycler
         setupFragment()
         return binding.root
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     private fun setupFragment() {
@@ -69,12 +77,12 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
             this.adapter = this@BlockMonthFragmentsHolder.adapter
             addOnScrollListener(object : RecyclerView.OnScrollListener() {
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    val firstVisible = (recyclerView.layoutManager as LinearLayoutManager)
-                        .findFirstVisibleItemPosition()
-                    if (firstVisible >= 0 && firstVisible < codes.size) {
-                        val newCode = codes[firstVisible]
+                    val pos = centerItemPosition(recyclerView)
+                    if (pos >= 0 && pos < codes.size) {
+                        val newCode = codes[pos]
                         if (newCode != currentDayCode) {
                             currentDayCode = newCode
+                            updateHeaderTitle(newCode)
                             val shouldBeVisible = shouldGoToTodayBeVisible()
                             if (isGoToTodayVisible != shouldBeVisible) {
                                 (activity as? MainActivity)?.toggleGoToTodayVisibility(shouldBeVisible)
@@ -86,6 +94,17 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
             })
             scrollToPosition(defaultMonthlyPage)
         }
+
+        updateHeaderTitle(codes[defaultMonthlyPage])
+    }
+
+    private fun updateHeaderTitle(code: String) {
+        val b = _binding ?: return
+        val dt = Formatter.getDateTimeFromCode(code)
+        var label = Formatter.getMonthName(requireContext(), dt.monthOfYear)
+        val targetYear = dt.toString("YYYY")
+        if (targetYear != DateTime().toString("YYYY")) label += " $targetYear"
+        b.blockMonthHeaderTitle.text = label
     }
 
     private fun getMonths(code: String): List<String> {
@@ -149,6 +168,18 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
         val last = lm.findLastVisibleItemPosition()
         if (first >= 0 && last >= 0) {
             adapter.notifyItemRangeChanged(first, last - first + 1)
+        }
+    }
+
+    private fun centerItemPosition(recyclerView: RecyclerView): Int {
+        val centerView = recyclerView.findChildViewUnder(
+            recyclerView.width / 2f,
+            recyclerView.height / 2f
+        )
+        return if (centerView != null) {
+            recyclerView.getChildAdapterPosition(centerView)
+        } else {
+            (recyclerView.layoutManager as LinearLayoutManager).findFirstVisibleItemPosition()
         }
     }
 

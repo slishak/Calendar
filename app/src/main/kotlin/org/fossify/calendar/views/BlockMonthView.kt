@@ -20,10 +20,12 @@ import org.joda.time.DateTime
 
 /**
  * Custom View for the Block Month View (Business Calendar 2 style).
- * Draws a 6-row × 7-column monthly grid where each day cell shows events as
+ * Draws a n-row × 7-column monthly grid where each day cell shows events as
  * proportionally-sized colored blocks based on the configured visible time window.
  * Concurrent timed events are rendered side-by-side using a greedy column algorithm.
  * Multi-day all-day events are drawn as spanning bars across day cell boundaries.
+ *
+ * Set [showWeekDayHeader] = false when using an external pinned header (BlockMonthHeaderView).
  */
 class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(context, attrs, defStyle) {
 
@@ -47,7 +49,8 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
 
     private var dayWidth = 0f
     private var dayHeight = 0f
-    private var weekDaysLetterHeight = 0f
+    private val fullWeekDaysLetterHeight: Float   // fixed height when header is shown
+    private var weekDaysLetterHeight = 0f         // 0 when showWeekDayHeader = false
     private var primaryColor = 0
     private var textColor = 0
     private var weekendsTextColor = 0
@@ -58,15 +61,26 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
     private var startHour = 0
     private var endHour = 24
 
+    /** Set to false when an external BlockMonthHeaderView provides the weekday labels. */
+    var showWeekDayHeader = true
+        set(value) {
+            field = value
+            weekDaysLetterHeight = if (value) fullWeekDaysLetterHeight else 0f
+            invalidate()
+        }
+
     private var days = ArrayList<DayMonthly>()
     private var dayLetters = ArrayList<String>()
     private var currDayOfWeek = -1
     private val bgRectF = RectF()
     private val dayTextRect = Rect()
 
+    /** Number of rows to draw — derived from the days array, trimmed of trailing next-month rows. */
+    private val rowCount: Int get() = if (days.isEmpty()) 0 else days.size / COLUMN_COUNT
+
     private var dayClickCallback: ((DayMonthly) -> Unit)? = null
 
-    // Pre-computed per-row all-day spanning data
+    // Pre-computed per-row all-day spanning data (sized to max ROW_COUNT = 6)
     private data class AllDaySpan(val event: Event, val startCol: Int, val endCol: Int, val track: Int)
     private val allDaySpansPerRow = Array(ROW_COUNT) { mutableListOf<AllDaySpan>() }
     private val maxTracksPerRow = IntArray(ROW_COUNT)
@@ -83,7 +97,8 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
 
         val normalTextSize = resources.getDimensionPixelSize(org.fossify.commons.R.dimen.normal_text_size)
         val smallerTextSize = resources.getDimensionPixelSize(org.fossify.commons.R.dimen.smaller_text_size)
-        weekDaysLetterHeight = normalTextSize * 2f
+        fullWeekDaysLetterHeight = normalTextSize * 2f
+        weekDaysLetterHeight = fullWeekDaysLetterHeight
 
         textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = textColor
@@ -149,14 +164,15 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        val rc = rowCount
         when (event.action) {
-            MotionEvent.ACTION_DOWN -> return true   // claim the gesture so ACTION_UP is delivered
+            MotionEvent.ACTION_DOWN -> return true
             MotionEvent.ACTION_UP -> {
                 val x = event.x - horizontalOffset
                 val y = event.y - weekDaysLetterHeight
-                if (x >= 0 && y >= 0 && dayWidth > 0 && dayHeight > 0) {
+                if (x >= 0 && y >= 0 && dayWidth > 0 && dayHeight > 0 && rc > 0) {
                     val col = (x / dayWidth).toInt().coerceIn(0, COLUMN_COUNT - 1)
-                    val row = (y / dayHeight).toInt().coerceIn(0, ROW_COUNT - 1)
+                    val row = (y / dayHeight).toInt().coerceIn(0, rc - 1)
                     val index = row * COLUMN_COUNT + col
                     days.getOrNull(index)?.let { dayClickCallback?.invoke(it) }
                 }
@@ -168,34 +184,35 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        measureDaySize(canvas)
-        drawGrid(canvas)
-        drawWeekDayLetters(canvas)
-        if (showWeekNumbers && days.isNotEmpty()) {
-            drawWeekNumbers(canvas)
-        }
+        val rc = rowCount
+        if (rc == 0) return
+        measureDaySize(canvas, rc)
+        drawGrid(canvas, rc)
+        if (showWeekDayHeader) drawWeekDayLetters(canvas)
+        if (showWeekNumbers && days.isNotEmpty()) drawWeekNumbers(canvas, rc)
         for (i in days.indices) {
             drawDay(canvas, days[i], i % COLUMN_COUNT, i / COLUMN_COUNT)
         }
-        drawAllDaySpans(canvas)
+        drawAllDaySpans(canvas, rc)
     }
 
-    private fun measureDaySize(canvas: Canvas) {
+    private fun measureDaySize(canvas: Canvas, rc: Int) {
         dayWidth = (canvas.width - horizontalOffset) / COLUMN_COUNT.toFloat()
-        dayHeight = (canvas.height - weekDaysLetterHeight) / ROW_COUNT.toFloat()
+        dayHeight = (canvas.height - weekDaysLetterHeight) / rc.toFloat()
     }
 
-    private fun drawGrid(canvas: Canvas) {
+    private fun drawGrid(canvas: Canvas, rc: Int) {
         for (i in 0..COLUMN_COUNT) {
             val x = i * dayWidth + horizontalOffset
             canvas.drawLine(x, weekDaysLetterHeight, x, height.toFloat(), gridPaint)
         }
-        for (i in 0..ROW_COUNT) {
+        for (i in 0..rc) {
             val y = weekDaysLetterHeight + i * dayHeight
             canvas.drawLine(horizontalOffset.toFloat(), y, width.toFloat(), y, gridPaint)
         }
-        // Day-of-week header separator
-        canvas.drawLine(0f, weekDaysLetterHeight, width.toFloat(), weekDaysLetterHeight, gridPaint)
+        if (showWeekDayHeader) {
+            canvas.drawLine(0f, weekDaysLetterHeight, width.toFloat(), weekDaysLetterHeight, gridPaint)
+        }
     }
 
     private fun drawWeekDayLetters(canvas: Canvas) {
@@ -210,10 +227,10 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
         }
     }
 
-    private fun drawWeekNumbers(canvas: Canvas) {
+    private fun drawWeekNumbers(canvas: Canvas, rc: Int) {
         if (days.size < 7) return
         val weekPaint = Paint(textPaint).apply { textSize = textPaint.textSize * 0.7f }
-        for (row in 0 until ROW_COUNT) {
+        for (row in 0 until rc) {
             val startIdx = row * 7
             val weekOfYear = days.getOrNull(startIdx + 3)?.weekOfYear ?: continue
             weekPaint.color = if (days.subList(startIdx, minOf(startIdx + 7, days.size)).any { it.isToday }) {
@@ -234,7 +251,6 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
         val contentTop = cellTop + headerHeight
         val contentHeight = dayHeight - headerHeight
 
-        // Day number
         val dayNumStr = day.value.toString()
         val numPaint = getTextPaintForDay(day)
         numPaint.getTextBounds(dayNumStr, 0, dayNumStr.length, dayTextRect)
@@ -248,18 +264,12 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
 
         canvas.drawText(dayNumStr, numX, numY, numPaint)
 
-        // Only draw timed events here; all-day events are drawn by drawAllDaySpans()
         val timedEvents = day.dayEvents.filter { !it.getIsAllDay() }
         if (timedEvents.isNotEmpty() && contentHeight > 4f) {
             drawTimedEvents(canvas, timedEvents, cellLeft, contentTop, contentHeight, row)
         }
     }
 
-    /**
-     * Draws timed (non-all-day) events for a single day cell. The all-day band height
-     * is reserved at the top based on the row's all-day track count, pushing timed
-     * events downward consistently across the row.
-     */
     private fun drawTimedEvents(
         canvas: Canvas,
         timedEvents: List<Event>,
@@ -272,18 +282,13 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
         if (totalMinutes <= 0f) return
 
         val pad = 1.5f
-
-        // Reserve space for the all-day band (same calculation used in drawAllDaySpans)
-        val maxTracks = maxTracksPerRow[row]
+        val maxTracks = if (row < maxTracksPerRow.size) maxTracksPerRow[row] else 0
         val allDayBandH = if (maxTracks > 0) minOf(contentHeight * ALL_DAY_FRACTION * maxTracks, contentHeight * 0.3f) else 0f
         val timedTop = contentTop + allDayBandH
         val timedHeight = contentHeight - allDayBandH
 
         if (timedHeight < 4f) return
 
-        // Layout timed events into columns to handle overlaps.
-        // Apply minimum duration before column assignment so zero-duration events
-        // are treated as overlapping with events at the same time.
         val minDurationSeconds = 30 * 60L
         data class Layout(val event: Event, val effectiveEndTS: Long, var col: Int, var totalCols: Int)
 
@@ -303,7 +308,6 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
             }
         }
 
-        // Compute totalCols per event based on overlap groups (using effective end times)
         for (layout in layouts) {
             var maxCol = layout.col
             for (other in layouts) {
@@ -314,7 +318,6 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
             layout.totalCols = maxCol + 1
         }
 
-        // Draw timed events
         for (layout in layouts) {
             val event = layout.event
             val startMin = clampedMinutes(event.startTS, totalMinutes)
@@ -338,20 +341,14 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
         }
     }
 
-    /**
-     * Pre-computes spanning data for all-day events across each week row.
-     * Called whenever the days list changes. Assigns each all-day event to a "track"
-     * within each row it occupies, using greedy interval scheduling per row.
-     */
     private fun computeAllDaySpans() {
+        val rc = rowCount
         for (row in 0 until ROW_COUNT) {
             allDaySpansPerRow[row].clear()
             maxTracksPerRow[row] = 0
         }
         if (days.isEmpty()) return
 
-        // Collect unique all-day events and their start/end cell indices using identity comparison
-        // (MonthlyCalendarImpl reuses the same Event instance across multiple day lists)
         data class EventRange(val event: Event, val startIdx: Int, val endIdx: Int)
         val seen = mutableSetOf<Event>()
         val eventRanges = mutableListOf<EventRange>()
@@ -366,8 +363,7 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
             }
         }
 
-        // For each row, assign tracks using greedy first-fit interval scheduling
-        for (row in 0 until ROW_COUNT) {
+        for (row in 0 until rc) {
             val rowStartIdx = row * COLUMN_COUNT
             val rowEndIdx = rowStartIdx + COLUMN_COUNT - 1
 
@@ -375,7 +371,7 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
                 .filter { it.startIdx <= rowEndIdx && it.endIdx >= rowStartIdx }
                 .sortedWith(compareBy({ it.startIdx }, { -(it.endIdx - it.startIdx) }))
 
-            val trackEnds = mutableListOf<Int>()  // track → last endCol used
+            val trackEnds = mutableListOf<Int>()
 
             for (range in rowEvents) {
                 val startCol = (range.startIdx - rowStartIdx).coerceIn(0, COLUMN_COUNT - 1)
@@ -396,16 +392,12 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
         }
     }
 
-    /**
-     * Draws all-day events as horizontal spanning bars that cross day-cell boundaries.
-     * Must be called AFTER drawDay() so it draws on top of the cell content.
-     */
-    private fun drawAllDaySpans(canvas: Canvas) {
+    private fun drawAllDaySpans(canvas: Canvas, rc: Int) {
         if (dayWidth == 0f || dayHeight == 0f) return
         val pad = 1.5f
 
-        for (row in 0 until ROW_COUNT) {
-            if (allDaySpansPerRow[row].isEmpty()) continue
+        for (row in 0 until rc) {
+            if (row >= allDaySpansPerRow.size || allDaySpansPerRow[row].isEmpty()) continue
 
             val rowTop = weekDaysLetterHeight + row * dayHeight
             val headerH = dayHeight * HEADER_FRACTION

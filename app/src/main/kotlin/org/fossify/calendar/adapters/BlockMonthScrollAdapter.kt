@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import org.fossify.calendar.databinding.ItemBlockMonthBinding
+import org.fossify.calendar.helpers.COLUMN_COUNT
 import org.fossify.calendar.helpers.Formatter
 import org.fossify.calendar.helpers.MonthlyCalendarImpl
 import org.fossify.calendar.interfaces.MonthlyCalendar
@@ -27,11 +28,12 @@ class BlockMonthScrollAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemBlockMonthBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        // Make each item fill the full RecyclerView height so one month = one screen
+        // Each item fills the RecyclerView height; weekday header is drawn externally
         val h = parent.height
         if (h > 0) {
             binding.root.layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, h)
         }
+        binding.blockMonthView.showWeekDayHeader = false
         return ViewHolder(binding)
     }
 
@@ -51,18 +53,39 @@ class BlockMonthScrollAdapter(
                 checkedEvents: Boolean,
                 currTargetDate: DateTime
             ) {
+                val trimmed = trimRows(days)
                 mainHandler.post {
                     if (holder.boundCode == code) {
-                        holder.binding.blockMonthTitle.text = month
-                        holder.binding.blockMonthView.updateDays(days)
+                        holder.binding.blockMonthView.updateDays(trimmed)
                     }
                 }
             }
         }, context)
 
         impl.mTargetDate = Formatter.getDateTimeFromCode(code)
-        // Show empty grid immediately, then async load events
         impl.getDays(false)
         impl.updateMonthlyCalendar(Formatter.getDateTimeFromCode(code))
+    }
+
+    /**
+     * Assigns each week row to the month where the majority (≥ 4 of 7) of its days belong.
+     * Leading and trailing rows where this month is the minority are trimmed, so every week
+     * appears in exactly one month and no week is ever duplicated across adjacent months.
+     */
+    private fun trimRows(days: ArrayList<DayMonthly>): ArrayList<DayMonthly> {
+        val result = days.toMutableList()
+        val majority = COLUMN_COUNT / 2 + 1  // 4 for a 7-day week
+
+        while (result.size >= COLUMN_COUNT) {
+            if (result.take(COLUMN_COUNT).count { it.isThisMonth } < majority) {
+                repeat(COLUMN_COUNT) { result.removeFirst() }
+            } else break
+        }
+        while (result.size >= COLUMN_COUNT) {
+            if (result.takeLast(COLUMN_COUNT).count { it.isThisMonth } < majority) {
+                repeat(COLUMN_COUNT) { result.removeLast() }
+            } else break
+        }
+        return ArrayList(result)
     }
 }
