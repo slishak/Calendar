@@ -55,7 +55,7 @@ class DayAgendaBottomSheet : BottomSheetDialogFragment() {
 
         val dayStart = Formatter.getDateTimeFromCode(dayCode).withTimeAtStartOfDay()
         val startTS = dayStart.seconds()
-        val endTS = dayStart.plusDays(1).seconds()
+        val endTS = dayStart.plusDays(1).seconds() - 1
 
         requireContext().eventsHelper.getEvents(startTS, endTS) { events ->
             val sorted = events.sortedWith(compareBy({ !it.getIsAllDay() }, { it.startTS }))
