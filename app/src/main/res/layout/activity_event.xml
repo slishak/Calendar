@@ -35,27 +35,12 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <org.fossify.commons.views.MyEditText
-                android:id="@+id/event_title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/activity_margin"
-                android:layout_marginTop="@dimen/activity_margin"
-                android:layout_marginEnd="@dimen/activity_margin"
-                android:hint="@string/title"
-                android:inputType="textCapSentences"
-                android:maxLength="180"
-                android:maxLines="1"
-                android:minEms="20"
-                android:textCursorDrawable="@null"
-                android:textSize="@dimen/day_text_size" />
-
-            <!-- Calendar + Color row (compact, at top of form) -->
+            <!-- Calendar + Color row (compact, at very top of form) -->
             <LinearLayout
                 android:id="@+id/event_calendar_color_row"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/event_title"
+                android:layout_alignParentTop="true"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
@@ -123,11 +108,27 @@
 
             </LinearLayout>
 
+            <org.fossify.commons.views.MyEditText
+                android:id="@+id/event_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/event_calendar_color_row"
+                android:layout_marginStart="@dimen/activity_margin"
+                android:layout_marginTop="@dimen/activity_margin"
+                android:layout_marginEnd="@dimen/activity_margin"
+                android:hint="@string/title"
+                android:inputType="textCapSentences"
+                android:maxLength="180"
+                android:maxLines="1"
+                android:minEms="20"
+                android:textCursorDrawable="@null"
+                android:textSize="@dimen/day_text_size" />
+
             <org.fossify.commons.views.MyAutoCompleteTextView
                 android:id="@+id/event_location"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/event_calendar_color_row"
+                android:layout_below="@+id/event_title"
                 android:layout_marginStart="@dimen/activity_margin"
                 android:layout_marginTop="@dimen/activity_margin"
                 android:layout_toStartOf="@+id/event_show_on_map"
