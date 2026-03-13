@@ -6,6 +6,7 @@ import androidx.recyclerview.widget.RecyclerView
 import org.fossify.calendar.databinding.ItemDayAgendaEventBinding
 import org.fossify.calendar.helpers.Formatter
 import org.fossify.calendar.models.Event
+import org.fossify.commons.extensions.getProperTextColor
 
 class DayAgendaAdapter(
     private val events: List<Event>,
@@ -24,9 +25,12 @@ class DayAgendaAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val event = events[position]
         val context = holder.binding.root.context
+        val textColor = context.getProperTextColor()
         holder.binding.apply {
             eventColorBar.setBackgroundColor(event.color)
             eventTitle.text = event.title
+            eventTitle.setTextColor(textColor)
+            eventTime.setTextColor(textColor)
             eventTime.text = if (event.getIsAllDay()) {
                 context.getString(org.fossify.calendar.R.string.all_day)
             } else {
