@@ -34,6 +34,9 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
         private const val HEADER_FRACTION = 0.22f   // fraction of day height used for the day number
         private const val ALL_DAY_FRACTION = 0.12f  // fraction of content height per all-day track
         private const val MIN_BLOCK_HEIGHT_FOR_TEXT = 14f
+        // Cell background shading (textColor overlay, so it works in both light and dark themes)
+        private const val PAST_DAY_DIM_ALPHA = 0.07f
+        private const val INACTIVE_MONTH_DIM_ALPHA = 0.16f
     }
 
     constructor(context: Context, attrs: AttributeSet) : this(context, attrs, 0)
@@ -60,6 +63,7 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
     private var dimPastEvents = true
     private var startHour = 0
     private var endHour = 24
+    private var todayCode = Formatter.getTodayCode()
 
     /** Set to false when an external BlockMonthHeaderView provides the weekday labels. */
     var showWeekDayHeader = true
@@ -161,6 +165,7 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
 
     fun updateDays(newDays: ArrayList<DayMonthly>) {
         days = newDays
+        todayCode = Formatter.getTodayCode()
         showWeekNumbers = config.showWeekNumbers
         horizontalOffset = context.getWeekNumberWidth()
         highlightWeekends = config.highlightWeekends
@@ -198,6 +203,7 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
         val rc = rowCount
         if (rc == 0) return
         measureDaySize(canvas, rc)
+        drawCellBackgrounds(canvas)
         drawGrid(canvas, rc)
         if (showWeekDayHeader) drawWeekDayLetters(canvas)
         if (showWeekNumbers && days.isNotEmpty()) drawWeekNumbers(canvas, rc)
@@ -210,6 +216,38 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
     private fun measureDaySize(canvas: Canvas, rc: Int) {
         dayWidth = (canvas.width - horizontalOffset) / COLUMN_COUNT.toFloat()
         dayHeight = (canvas.height - weekDaysLetterHeight) / rc.toFloat()
+    }
+
+    /**
+     * Fills each cell with a semi-transparent textColor overlay to create three brightness levels:
+     *   - Active month, today/future: no overlay (brightest — base background shows through)
+     *   - Active month, before today: faint overlay
+     *   - Inactive month (overflow days): stronger overlay
+     * Using textColor as the overlay tint makes this automatically theme-aware.
+     */
+    private fun drawCellBackgrounds(canvas: Canvas) {
+        val cellPaint = Paint(eventPaint)
+        for (i in days.indices) {
+            val day = days[i]
+            val isInactive = if (activeMonthCode.isNotEmpty())
+                day.code.getMonthCode() != activeMonthCode
+            else
+                !day.isThisMonth
+
+            val overlayAlpha = when {
+                isInactive -> INACTIVE_MONTH_DIM_ALPHA
+                day.code < todayCode && !day.isToday -> PAST_DAY_DIM_ALPHA
+                else -> continue
+            }
+
+            val col = i % COLUMN_COUNT
+            val row = i / COLUMN_COUNT
+            val cellLeft = horizontalOffset + col * dayWidth
+            val cellTop = weekDaysLetterHeight + row * dayHeight
+            bgRectF.set(cellLeft, cellTop, cellLeft + dayWidth, cellTop + dayHeight)
+            cellPaint.color = textColor.adjustAlpha(overlayAlpha)
+            canvas.drawRect(bgRectF, cellPaint)
+        }
     }
 
     private fun drawGrid(canvas: Canvas, rc: Int) {
