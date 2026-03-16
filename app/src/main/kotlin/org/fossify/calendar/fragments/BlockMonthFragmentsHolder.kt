@@ -102,7 +102,7 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
                     }
                 }
             })
-            scrollToPosition(defaultPage)
+            scrollToPositionCentered(defaultPage)
         }
 
         updateHeaderTitle(codes[defaultPage])
@@ -153,8 +153,9 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     }
 
     override fun goToToday() {
+        val midMonth = DateTime().withDayOfMonth(15)
         currentDayCode = Formatter.getDayCodeFromDateTime(
-            requireContext().getFirstDayOfWeekDt(DateTime())
+            requireContext().getFirstDayOfWeekDt(midMonth)
         )
         setupFragment()
     }
@@ -198,6 +199,14 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
             vh?.binding?.blockMonthView?.let {
                 it.activeMonthCode = monthCode
             }
+        }
+    }
+
+    private fun scrollToPositionCentered(position: Int) {
+        recyclerView.post {
+            val lm = recyclerView.layoutManager as? LinearLayoutManager ?: return@post
+            val offset = (recyclerView.height / 5) * 2
+            lm.scrollToPositionWithOffset(position, offset)
         }
     }
 
