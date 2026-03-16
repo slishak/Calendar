@@ -13,6 +13,7 @@ import org.fossify.calendar.activities.MainActivity
 import org.fossify.calendar.adapters.BlockMonthScrollAdapter
 import org.fossify.calendar.databinding.FragmentBlockMonthsHolderBinding
 import org.fossify.calendar.dialogs.DayAgendaBottomSheet
+import org.fossify.calendar.extensions.getFirstDayOfWeekDt
 import org.fossify.calendar.extensions.getMonthCode
 import org.fossify.calendar.helpers.BLOCK_MONTH_VIEW
 import org.fossify.calendar.helpers.DAY_CODE
@@ -26,7 +27,7 @@ import org.fossify.commons.extensions.setupDialogStuff
 import org.joda.time.DateTime
 
 class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
-    private val PREFILLED_MONTHS = 251
+    private val PREFILLED_WEEKS = 261   // ~5 years of weeks
 
     private var _binding: FragmentBlockMonthsHolderBinding? = null
     private val binding get() = _binding!!
@@ -34,7 +35,7 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: BlockMonthScrollAdapter
     private lateinit var codes: List<String>
-    private var defaultMonthlyPage = 0
+    private var defaultPage = 0
     private var todayDayCode = ""
     private var currentDayCode = ""
     private var isGoToTodayVisible = false
@@ -62,8 +63,8 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     }
 
     private fun setupFragment() {
-        codes = getMonths(currentDayCode)
-        defaultMonthlyPage = codes.size / 2
+        codes = getWeeks(currentDayCode)
+        defaultPage = codes.size / 2
 
         adapter = BlockMonthScrollAdapter(
             context = requireContext(),
@@ -73,7 +74,7 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
                     .show(parentFragmentManager, "day_agenda")
             }
         )
-        adapter.activeMonthCode = codes[defaultMonthlyPage].getMonthCode()
+        adapter.activeMonthCode = weekCodeToMonthCode(codes[defaultPage])
 
         recyclerView.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -81,43 +82,55 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
             addOnScrollListener(object : RecyclerView.OnScrollListener() {
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     val pos = centerItemPosition(recyclerView)
-                    if (pos >= 0 && pos < codes.size) {
-                        val newCode = codes[pos]
-                        if (newCode != currentDayCode) {
-                            currentDayCode = newCode
-                            updateHeaderTitle(newCode)
-                            updateActiveMonthHighlight(newCode.getMonthCode())
-                            val shouldBeVisible = shouldGoToTodayBeVisible()
-                            if (isGoToTodayVisible != shouldBeVisible) {
-                                (activity as? MainActivity)?.toggleGoToTodayVisibility(shouldBeVisible)
-                                isGoToTodayVisible = shouldBeVisible
-                            }
+                    if (pos < 0 || pos >= codes.size) return
+                    val newCode = codes[pos]
+
+                    // Month highlight and header update whenever the derived month changes
+                    val newMonthCode = weekCodeToMonthCode(newCode)
+                    if (this@BlockMonthFragmentsHolder.adapter.activeMonthCode != newMonthCode) {
+                        updateHeaderTitle(newCode)
+                        updateActiveMonthHighlight(newMonthCode)
+                    }
+
+                    if (newCode != currentDayCode) {
+                        currentDayCode = newCode
+                        val shouldBeVisible = shouldGoToTodayBeVisible()
+                        if (isGoToTodayVisible != shouldBeVisible) {
+                            (activity as? MainActivity)?.toggleGoToTodayVisibility(shouldBeVisible)
+                            isGoToTodayVisible = shouldBeVisible
                         }
                     }
                 }
             })
-            scrollToPosition(defaultMonthlyPage)
+            scrollToPosition(defaultPage)
         }
 
-        updateHeaderTitle(codes[defaultMonthlyPage])
+        updateHeaderTitle(codes[defaultPage])
     }
 
-    private fun updateHeaderTitle(code: String) {
+    /** Returns the YYYYMM month code for the week — using the 4th day (Thursday for Mon-start). */
+    private fun weekCodeToMonthCode(weekCode: String): String =
+        Formatter.getDayCodeFromDateTime(Formatter.getDateTimeFromCode(weekCode).plusDays(3)).getMonthCode()
+
+    private fun updateHeaderTitle(weekCode: String) {
         val b = _binding ?: return
-        val dt = Formatter.getDateTimeFromCode(code)
+        val dt = Formatter.getDateTimeFromCode(weekCode).plusDays(3)
         var label = Formatter.getMonthName(requireContext(), dt.monthOfYear)
         val targetYear = dt.toString("YYYY")
         if (targetYear != DateTime().toString("YYYY")) label += " $targetYear"
         b.blockMonthHeaderTitle.text = label
     }
 
-    private fun getMonths(code: String): List<String> {
-        val months = ArrayList<String>(PREFILLED_MONTHS)
-        val today = Formatter.getDateTimeFromCode(code).withDayOfMonth(1)
-        for (i in -PREFILLED_MONTHS / 2..PREFILLED_MONTHS / 2) {
-            months.add(Formatter.getDayCodeFromDateTime(today.plusMonths(i)))
+    /** Generates PREFILLED_WEEKS week-start day codes centred on the week containing [code]. */
+    private fun getWeeks(code: String): List<String> {
+        val weeks = ArrayList<String>(PREFILLED_WEEKS)
+        val weekStart = requireContext().getFirstDayOfWeekDt(Formatter.getDateTimeFromCode(code))
+        var current = weekStart.minusWeeks(PREFILLED_WEEKS / 2)
+        repeat(PREFILLED_WEEKS) {
+            weeks.add(Formatter.getDayCodeFromDateTime(current))
+            current = current.plusWeeks(1)
         }
-        return months
+        return weeks
     }
 
     override fun goLeft() {
@@ -133,12 +146,16 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     }
 
     override fun goToDateTime(dateTime: DateTime) {
-        currentDayCode = Formatter.getDayCodeFromDateTime(dateTime)
+        currentDayCode = Formatter.getDayCodeFromDateTime(
+            requireContext().getFirstDayOfWeekDt(dateTime)
+        )
         setupFragment()
     }
 
     override fun goToToday() {
-        currentDayCode = todayDayCode
+        currentDayCode = Formatter.getDayCodeFromDateTime(
+            requireContext().getFirstDayOfWeekDt(DateTime())
+        )
         setupFragment()
     }
 
@@ -162,8 +179,7 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     private fun datePicked(dateTime: DateTime, datePicker: DatePicker) {
         val month = datePicker.month + 1
         val year = datePicker.year
-        val newDateTime = dateTime.withDate(year, month, 1)
-        goToDateTime(newDateTime)
+        goToDateTime(dateTime.withDate(year, month, 1))
     }
 
     override fun refreshEvents() {
@@ -171,7 +187,7 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
         val first = lm.findFirstVisibleItemPosition()
         val last = lm.findLastVisibleItemPosition()
         if (first >= 0 && last >= 0) {
-            adapter.notifyItemRangeChanged(first, last - first + 1)
+            adapter.notifyItemRangeChanged(first, last - first + 1, BlockMonthScrollAdapter.PAYLOAD_REFRESH_EVENTS)
         }
     }
 
@@ -197,7 +213,10 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
         }
     }
 
-    override fun shouldGoToTodayBeVisible() = currentDayCode.getMonthCode() != todayDayCode.getMonthCode()
+    override fun shouldGoToTodayBeVisible(): Boolean {
+        val todayWeekCode = Formatter.getDayCodeFromDateTime(requireContext().getFirstDayOfWeekDt(DateTime()))
+        return currentDayCode != todayWeekCode
+    }
 
     override fun getNewEventDayCode() = if (shouldGoToTodayBeVisible()) currentDayCode else todayDayCode
 
