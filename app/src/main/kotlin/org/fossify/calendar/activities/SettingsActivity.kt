@@ -883,6 +883,7 @@ class SettingsActivity : SimpleActivity() {
                 RadioItem(WEEKLY_VIEW, getString(R.string.weekly_view)),
                 RadioItem(MONTHLY_VIEW, getString(R.string.monthly_view)),
                 RadioItem(MONTHLY_DAILY_VIEW, getString(R.string.monthly_daily_view)),
+                RadioItem(BLOCK_MONTH_VIEW, getString(R.string.block_month_view)),
                 RadioItem(YEARLY_VIEW, getString(R.string.yearly_view)),
                 RadioItem(EVENTS_LIST_VIEW, getString(R.string.simple_event_list)),
                 RadioItem(LAST_VIEW, getString(R.string.last_view))
@@ -906,6 +907,7 @@ class SettingsActivity : SimpleActivity() {
             WEEKLY_VIEW -> R.string.weekly_view
             MONTHLY_VIEW -> R.string.monthly_view
             MONTHLY_DAILY_VIEW -> R.string.monthly_daily_view
+            BLOCK_MONTH_VIEW -> R.string.block_month_view
             YEARLY_VIEW -> R.string.yearly_view
             EVENTS_LIST_VIEW -> R.string.simple_event_list
             else -> R.string.last_view

@@ -90,6 +90,10 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
                     if (this@BlockMonthFragmentsHolder.adapter.activeMonthCode != newMonthCode) {
                         updateHeaderTitle(newCode)
                         updateActiveMonthHighlight(newMonthCode)
+                    } else {
+                        // Month unchanged, but views restored from RecyclerView's scroll cache
+                        // won't have had onBindViewHolder called — sync any that drifted.
+                        syncActiveMonthToVisibleViews()
                     }
 
                     if (newCode != currentDayCode) {
@@ -146,8 +150,9 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     }
 
     override fun goToDateTime(dateTime: DateTime) {
+        val midMonth = dateTime.withDayOfMonth(15)
         currentDayCode = Formatter.getDayCodeFromDateTime(
-            requireContext().getFirstDayOfWeekDt(dateTime)
+            requireContext().getFirstDayOfWeekDt(midMonth)
         )
         setupFragment()
     }
@@ -194,10 +199,18 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
 
     private fun updateActiveMonthHighlight(monthCode: String) {
         adapter.activeMonthCode = monthCode
+        syncActiveMonthToVisibleViews()
+    }
+
+    /** Pushes the adapter's current activeMonthCode to any visible view that has drifted
+     *  (e.g. restored from RecyclerView's scroll cache without a fresh onBindViewHolder). */
+    private fun syncActiveMonthToVisibleViews() {
+        val monthCode = adapter.activeMonthCode
         for (i in 0 until recyclerView.childCount) {
             val vh = recyclerView.getChildViewHolder(recyclerView.getChildAt(i)) as? BlockMonthScrollAdapter.ViewHolder
-            vh?.binding?.blockMonthView?.let {
-                it.activeMonthCode = monthCode
+            val view = vh?.binding?.blockMonthView ?: continue
+            if (view.activeMonthCode != monthCode) {
+                view.activeMonthCode = monthCode
             }
         }
     }
