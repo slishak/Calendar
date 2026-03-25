@@ -29,6 +29,10 @@ class BlockMonthScrollAdapter(
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    // Pending holders waiting for a batched event load. Key = week-start day code.
+    private val pendingHolders = LinkedHashMap<String, ViewHolder>()
+    private val batchLoadRunnable = Runnable { executeBatchLoad() }
+
     inner class ViewHolder(val binding: ItemBlockMonthBinding) : RecyclerView.ViewHolder(binding.root) {
         var boundCode = ""
         var currentDays: ArrayList<DayMonthly>? = null
@@ -48,7 +52,7 @@ class BlockMonthScrollAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int, payloads: MutableList<Any>) {
         if (payloads.isNotEmpty() && payloads.all { it == PAYLOAD_REFRESH_EVENTS }) {
-            reloadEvents(holder, codes[position])
+            scheduleBatchLoad(holder, codes[position])
         } else {
             onBindViewHolder(holder, position)
         }
@@ -62,26 +66,47 @@ class BlockMonthScrollAdapter(
 
         val days = generateWeekDays(weekCode)
         holder.currentDays = days
-        // Show structure immediately; events fill in async below
+        // Show structure immediately; events filled in via the batched load below.
         holder.binding.blockMonthView.updateDays(days)
-        reloadEvents(holder, weekCode)
+
+        scheduleBatchLoad(holder, weekCode)
     }
 
-    private fun reloadEvents(holder: ViewHolder, weekCode: String) {
-        val days = holder.currentDays ?: return
+    /**
+     * Adds this holder to the pending batch and (re)schedules the batch runnable.
+     * Because all onBindViewHolder calls during a single layout pass run synchronously
+     * on the main thread, posting the runnable means it executes after all of them
+     * have completed — so one DB query covers every pending week.
+     */
+    private fun scheduleBatchLoad(holder: ViewHolder, weekCode: String) {
+        pendingHolders[weekCode] = holder
+        mainHandler.removeCallbacks(batchLoadRunnable)
+        mainHandler.post(batchLoadRunnable)
+    }
 
-        val weekStartDT = Formatter.getLocalDateTimeFromCode(weekCode)
-        val startTS = weekStartDT.seconds()
-        val endTS = weekStartDT.plusDays(7).seconds()
+    private fun executeBatchLoad() {
+        if (pendingHolders.isEmpty()) return
+        val toLoad = LinkedHashMap(pendingHolders)
+        pendingHolders.clear()
+
+        val startTS = toLoad.keys.minOf { Formatter.getLocalDateTimeFromCode(it).seconds() }
+        val endTS = toLoad.keys.maxOf { Formatter.getLocalDateTimeFromCode(it).plusDays(7).seconds() }
 
         context.eventsHelper.getEvents(startTS, endTS) { events ->
-            // Clear and repopulate inside the async callback so the main thread
-            // never sees an intermediate state with events cleared but not yet refilled.
-            days.forEach { it.dayEvents.clear() }
-            attachEventsToWeekDays(days, events)
+            // Distribute events to each week's day list (background thread).
+            toLoad.forEach { (weekCode, holder) ->
+                val days = holder.currentDays ?: return@forEach
+                if (holder.boundCode != weekCode) return@forEach
+                days.forEach { it.dayEvents.clear() }
+                attachEventsToWeekDays(days, events)
+            }
+            // Redraw all at once on the main thread.
             mainHandler.post {
-                if (holder.boundCode == weekCode) {
-                    holder.binding.blockMonthView.updateDays(days)
+                toLoad.forEach { (weekCode, holder) ->
+                    val days = holder.currentDays ?: return@forEach
+                    if (holder.boundCode == weekCode) {
+                        holder.binding.blockMonthView.updateDays(days)
+                    }
                 }
             }
         }
@@ -117,13 +142,18 @@ class BlockMonthScrollAdapter(
             val startDT = Formatter.getDateTimeFromTS(event.startTS)
             val endDT = Formatter.getDateTimeFromTS(event.endTS)
             val endCode = Formatter.getDayCodeFromDateTime(endDT)
+            // If endTS is exactly midnight, the event has zero duration on that day — exclude it.
+            val endIsMidnight = endDT.hourOfDay == 0 && endDT.minuteOfHour == 0
             var curr = startDT
             while (true) {
                 val code = Formatter.getDayCodeFromDateTime(curr)
+                val isLastDay = code == endCode
                 if (code >= firstCode && code <= lastCode) {
-                    days.firstOrNull { it.code == code }?.dayEvents?.add(event)
+                    if (!isLastDay || !endIsMidnight) {
+                        days.firstOrNull { it.code == code }?.dayEvents?.add(event)
+                    }
                 }
-                if (code == endCode || code > lastCode) break
+                if (isLastDay || code > lastCode) break
                 curr = curr.plusDays(1)
             }
         }

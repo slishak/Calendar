@@ -370,10 +370,16 @@ class BlockMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
         for (layout in layouts) {
             val event = layout.event
             val startMin = clampedMinutes(event.startTS, totalMinutes)
-            val endMin = clampedMinutes(layout.effectiveEndTS, totalMinutes)
+            // An effectiveEndTS of exactly 00:00 means "midnight = end of the previous day".
+            // clampedMinutes would return 0 (start of day), producing an inverted rect.
+            // Treat it as totalMinutes (end of day) instead.
+            val endDT = Formatter.getDateTimeFromTS(layout.effectiveEndTS)
+            val endMin = if (endDT.hourOfDay == 0 && endDT.minuteOfHour == 0) totalMinutes
+                         else clampedMinutes(layout.effectiveEndTS, totalMinutes)
 
             val top = timedTop + (startMin / totalMinutes) * timedHeight
             val bot = timedTop + (endMin / totalMinutes) * timedHeight
+            if (bot <= top) continue
             val blockH = bot - top
 
             val colW = (dayWidth - pad * 2) / layout.totalCols

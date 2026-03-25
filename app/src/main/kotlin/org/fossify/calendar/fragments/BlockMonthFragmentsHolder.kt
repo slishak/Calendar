@@ -108,13 +108,13 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
         updateHeaderTitle(codes[defaultPage])
     }
 
-    /** Returns the YYYYMM month code for the week — using the 4th day (Thursday for Mon-start). */
-    private fun weekCodeToMonthCode(weekCode: String): String =
-        Formatter.getDayCodeFromDateTime(Formatter.getDateTimeFromCode(weekCode).plusDays(3)).getMonthCode()
+    /** Returns the YYYYMM month code for the week — uses the week's starting day so that a week
+     *  spanning a month boundary is always attributed to the month it starts in. */
+    private fun weekCodeToMonthCode(weekCode: String): String = weekCode.substring(0, 6)
 
     private fun updateHeaderTitle(weekCode: String) {
         val b = _binding ?: return
-        val dt = Formatter.getDateTimeFromCode(weekCode).plusDays(3)
+        val dt = Formatter.getDateTimeFromCode(weekCode)
         var label = Formatter.getMonthName(requireContext(), dt.monthOfYear)
         val targetYear = dt.toString("YYYY")
         if (targetYear != DateTime().toString("YYYY")) label += " $targetYear"
