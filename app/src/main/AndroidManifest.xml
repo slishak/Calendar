@@ -262,8 +262,26 @@
                 android:resource="@xml/widget_date_info" />
         </receiver>
 
+        <receiver
+            android:name=".helpers.MyWidgetAgendaProvider"
+            android:exported="true"
+            android:label="@string/widget_agenda">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_agenda_info" />
+        </receiver>
+
         <service
             android:name=".services.WidgetService"
+            android:exported="true"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
+
+        <service
+            android:name=".services.WidgetAgendaService"
             android:exported="true"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
 

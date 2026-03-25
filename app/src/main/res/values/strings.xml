@@ -19,6 +19,9 @@
     <string name="widget_monthly">Calendar monthly</string>
     <string name="widget_list">Calendar event list</string>
     <string name="widget_todays_date">Calendar today\'s date</string>
+    <string name="widget_agenda">Calendar agenda</string>
+    <string name="agenda_widget_font_size">Agenda widget font size</string>
+    <string name="agenda_widget_hide_past_events">Hide past events in agenda widget</string>
 
     <!-- Event -->
     <string name="event">Event</string>

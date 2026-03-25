@@ -8,6 +8,7 @@ import org.fossify.calendar.extensions.config
 import org.fossify.calendar.extensions.scheduleCalDAVSync
 import org.fossify.commons.extensions.getDefaultAlarmTitle
 import org.fossify.commons.helpers.BaseConfig
+import org.fossify.commons.helpers.FONT_SIZE_MEDIUM
 import org.fossify.commons.helpers.DAY_MINUTES
 import org.fossify.commons.helpers.YEAR_SECONDS
 
@@ -172,6 +173,14 @@ class Config(context: Context) : BaseConfig(context) {
         get() = prefs.getBoolean(DIM_COMPLETED_TASKS, true)
         set(dimCompletedTasks) = prefs.edit().putBoolean(DIM_COMPLETED_TASKS, dimCompletedTasks)
             .apply()
+
+    var agendaWidgetHidePastEvents: Boolean
+        get() = prefs.getBoolean(AGENDA_WIDGET_HIDE_PAST_EVENTS, false)
+        set(v) = prefs.edit().putBoolean(AGENDA_WIDGET_HIDE_PAST_EVENTS, v).apply()
+
+    var agendaWidgetFontSize: Int
+        get() = prefs.getInt(AGENDA_WIDGET_FONT_SIZE, FONT_SIZE_MEDIUM)
+        set(v) = prefs.edit().putInt(AGENDA_WIDGET_FONT_SIZE, v).apply()
 
     fun getSyncedCalendarIdsAsList() =
         caldavSyncedCalendarIds.split(",").filter { it.trim().isNotEmpty() }

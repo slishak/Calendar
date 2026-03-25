@@ -26,6 +26,7 @@ import org.fossify.calendar.extensions.scheduleNextAutomaticBackup
 import org.fossify.calendar.extensions.showImportEventsDialog
 import org.fossify.calendar.extensions.tryImportEventsFromFile
 import org.fossify.calendar.extensions.updateWidgets
+import org.fossify.calendar.helpers.BLOCK_MONTH_VIEW
 import org.fossify.calendar.helpers.ALLOW_CHANGING_TIME_ZONES
 import org.fossify.calendar.helpers.ALLOW_CREATING_TASKS
 import org.fossify.calendar.helpers.ALLOW_CUSTOMIZE_DAY_COUNT
@@ -220,6 +221,8 @@ class SettingsActivity : SimpleActivity() {
         setupFontSize()
         setupCustomizeWidgetColors()
         setupViewToOpenFromListWidget()
+        setupAgendaWidgetFontSize()
+        setupAgendaWidgetHidePastEvents()
         setupDimEvents()
         setupDimCompletedTasks()
         setupAllowChangingTimeZones()
@@ -913,6 +916,41 @@ class SettingsActivity : SimpleActivity() {
             else -> R.string.last_view
         }
     )
+
+    private fun setupAgendaWidgetFontSize() = binding.apply {
+        settingsAgendaWidgetFontSize.text = getAgendaWidgetFontSizeText()
+        settingsAgendaWidgetFontSizeHolder.setOnClickListener {
+            val items = arrayListOf(
+                RadioItem(FONT_SIZE_SMALL, getString(org.fossify.commons.R.string.small)),
+                RadioItem(FONT_SIZE_MEDIUM, getString(org.fossify.commons.R.string.medium)),
+                RadioItem(FONT_SIZE_LARGE, getString(org.fossify.commons.R.string.large)),
+                RadioItem(FONT_SIZE_EXTRA_LARGE, getString(org.fossify.commons.R.string.extra_large))
+            )
+            RadioGroupDialog(this@SettingsActivity, items, config.agendaWidgetFontSize) {
+                config.agendaWidgetFontSize = it as Int
+                settingsAgendaWidgetFontSize.text = getAgendaWidgetFontSizeText()
+                updateWidgets()
+            }
+        }
+    }
+
+    private fun getAgendaWidgetFontSizeText() = getString(
+        when (config.agendaWidgetFontSize) {
+            FONT_SIZE_SMALL -> org.fossify.commons.R.string.small
+            FONT_SIZE_MEDIUM -> org.fossify.commons.R.string.medium
+            FONT_SIZE_LARGE -> org.fossify.commons.R.string.large
+            else -> org.fossify.commons.R.string.extra_large
+        }
+    )
+
+    private fun setupAgendaWidgetHidePastEvents() = binding.apply {
+        settingsAgendaWidgetHidePastEvents.isChecked = config.agendaWidgetHidePastEvents
+        settingsAgendaWidgetHidePastEventsHolder.setOnClickListener {
+            settingsAgendaWidgetHidePastEvents.toggle()
+            config.agendaWidgetHidePastEvents = settingsAgendaWidgetHidePastEvents.isChecked
+            updateWidgets()
+        }
+    }
 
     private fun setupDimEvents() = binding.apply {
         settingsDimPastEvents.isChecked = config.dimPastEvents
