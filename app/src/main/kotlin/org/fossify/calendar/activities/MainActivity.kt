@@ -261,6 +261,8 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
             || mStoredHighlightWeekends != config.highlightWeekends || mStoredHighlightWeekendsColor != config.highlightWeekendsColor
         ) {
             updateViewPager()
+        } else {
+            refreshViewPager()
         }
 
         eventsHelper.getCalendars(this, false) {
