@@ -965,7 +965,7 @@ fun Context.getWidgetFontSize() = when (config.fontSize) {
     else -> getWidgetExtraLargeFontSize()
 }
 
-fun Context.getWidgetExtraSmallFontSize() = getWidgetMediumFontSize() - 6f
+fun Context.getWidgetExtraSmallFontSize() = getWidgetMediumFontSize() - 4.5f
 fun Context.getWidgetSmallFontSize() = getWidgetMediumFontSize() - 3f
 fun Context.getWidgetMediumFontSize() =
     resources.getDimension(R.dimen.day_text_size) / resources.displayMetrics.density

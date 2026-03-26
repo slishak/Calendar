@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.widget.DatePicker
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -77,6 +78,7 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
         adapter.activeMonthCode = weekCodeToMonthCode(codes[defaultPage])
 
         recyclerView.apply {
+            clearOnScrollListeners()
             layoutManager = LinearLayoutManager(requireContext())
             this.adapter = this@BlockMonthFragmentsHolder.adapter
             addOnScrollListener(object : RecyclerView.OnScrollListener() {
@@ -158,11 +160,21 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     }
 
     override fun goToToday() {
-        val midMonth = DateTime().withDayOfMonth(15)
-        currentDayCode = Formatter.getDayCodeFromDateTime(
-            requireContext().getFirstDayOfWeekDt(midMonth)
-        )
-        setupFragment()
+        val todayWeekCode = Formatter.getDayCodeFromDateTime(requireContext().getFirstDayOfWeekDt(DateTime()))
+        val pos = codes.indexOf(todayWeekCode)
+        if (pos >= 0) {
+            // Today is in the current 5-year window — scroll directly without rebuilding the adapter.
+            currentDayCode = todayWeekCode
+            val lm = recyclerView.layoutManager as? LinearLayoutManager ?: return
+            lm.scrollToPositionWithOffset(pos, (recyclerView.height / 5) * 2)
+            updateHeaderTitle(todayWeekCode)
+            updateActiveMonthHighlight(weekCodeToMonthCode(todayWeekCode))
+            (activity as? MainActivity)?.toggleGoToTodayVisibility(false)
+            isGoToTodayVisible = false
+        } else {
+            currentDayCode = todayWeekCode
+            setupFragment()
+        }
     }
 
     override fun showGoToDateDialog() {
@@ -216,10 +228,22 @@ class BlockMonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     }
 
     private fun scrollToPositionCentered(position: Int) {
-        recyclerView.post {
-            val lm = recyclerView.layoutManager as? LinearLayoutManager ?: return@post
+        fun doScroll() {
+            val lm = recyclerView.layoutManager as? LinearLayoutManager ?: return
             val offset = (recyclerView.height / 5) * 2
             lm.scrollToPositionWithOffset(position, offset)
+        }
+        if (recyclerView.height > 0) {
+            doScroll()
+        } else {
+            recyclerView.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    if (recyclerView.height > 0) {
+                        recyclerView.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                        doScroll()
+                    }
+                }
+            })
         }
     }
 
