@@ -179,7 +179,8 @@ class EventListWidgetAdapter(val context: Context, val intent: Intent) : RemoteV
         initConfigValues()
         val period = intent.getIntExtra(EVENT_LIST_PERIOD, 0)
         val currentDate = DateTime()
-        val fromTS = currentDate.seconds() - context.config.displayPastEvents * 60
+        val fromTS = if (context.config.hidePastEventsInWidgets) currentDate.seconds()
+                     else currentDate.seconds() - context.config.displayPastEvents * 60
         val toTS = when (period) {
             0 -> currentDate.plusYears(1).seconds()
             EVENT_PERIOD_TODAY -> currentDate.withTime(23, 59, 59, 999).seconds()

@@ -40,6 +40,7 @@ import org.fossify.calendar.helpers.AUTOMATIC_BACKUP_REQUEST_CODE
 import org.fossify.calendar.helpers.CalDAVHelper
 import org.fossify.calendar.helpers.Config
 import org.fossify.calendar.helpers.DAY
+import org.fossify.calendar.helpers.FONT_SIZE_EXTRA_SMALL
 import org.fossify.calendar.helpers.DEFAULT_START_TIME_CURRENT_TIME
 import org.fossify.calendar.helpers.DEFAULT_START_TIME_NEXT_FULL_HOUR
 import org.fossify.calendar.helpers.DELETE_ALL_OCCURRENCES
@@ -55,6 +56,7 @@ import org.fossify.calendar.helpers.IS_TASK_COMPLETED
 import org.fossify.calendar.helpers.IcsExporter
 import org.fossify.calendar.helpers.MONTH
 import org.fossify.calendar.helpers.MyWidgetDateProvider
+import org.fossify.calendar.helpers.MyWidgetAgendaProvider
 import org.fossify.calendar.helpers.MyWidgetListProvider
 import org.fossify.calendar.helpers.MyWidgetMonthlyProvider
 import org.fossify.calendar.helpers.NEW_EVENT_START_TS
@@ -155,6 +157,21 @@ fun Context.updateWidgets() {
 
     updateListWidget()
     updateDateWidget()
+    updateAgendaWidget()
+}
+
+fun Context.updateAgendaWidget() {
+    val widgetIDs = AppWidgetManager.getInstance(applicationContext)
+        ?.getAppWidgetIds(ComponentName(applicationContext, MyWidgetAgendaProvider::class.java))
+        ?: return
+
+    if (widgetIDs.isNotEmpty()) {
+        Intent(applicationContext, MyWidgetAgendaProvider::class.java).apply {
+            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, widgetIDs)
+            sendBroadcast(this)
+        }
+    }
 }
 
 fun Context.updateListWidget() {
@@ -941,19 +958,14 @@ fun Context.refreshCalDAVCalendars(ids: String, showToasts: Boolean) {
 }
 
 fun Context.getWidgetFontSize() = when (config.fontSize) {
+    FONT_SIZE_EXTRA_SMALL -> getWidgetExtraSmallFontSize()
     FONT_SIZE_SMALL -> getWidgetSmallFontSize()
     FONT_SIZE_MEDIUM -> getWidgetMediumFontSize()
     FONT_SIZE_LARGE -> getWidgetLargeFontSize()
     else -> getWidgetExtraLargeFontSize()
 }
 
-fun Context.getAgendaWidgetFontSize() = when (config.agendaWidgetFontSize) {
-    FONT_SIZE_SMALL -> getWidgetSmallFontSize()
-    FONT_SIZE_MEDIUM -> getWidgetMediumFontSize()
-    FONT_SIZE_LARGE -> getWidgetLargeFontSize()
-    else -> getWidgetExtraLargeFontSize()
-}
-
+fun Context.getWidgetExtraSmallFontSize() = getWidgetMediumFontSize() - 6f
 fun Context.getWidgetSmallFontSize() = getWidgetMediumFontSize() - 3f
 fun Context.getWidgetMediumFontSize() =
     resources.getDimension(R.dimen.day_text_size) / resources.displayMetrics.density

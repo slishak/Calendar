@@ -108,6 +108,7 @@ import org.fossify.commons.helpers.APP_ICON_COLOR
 import org.fossify.commons.helpers.BACKGROUND_COLOR
 import org.fossify.commons.helpers.FIRST_DAY_OF_WEEK
 import org.fossify.commons.helpers.FONT_SIZE
+import org.fossify.calendar.helpers.FONT_SIZE_EXTRA_SMALL
 import org.fossify.commons.helpers.FONT_SIZE_EXTRA_LARGE
 import org.fossify.commons.helpers.FONT_SIZE_LARGE
 import org.fossify.commons.helpers.FONT_SIZE_MEDIUM
@@ -221,7 +222,6 @@ class SettingsActivity : SimpleActivity() {
         setupFontSize()
         setupCustomizeWidgetColors()
         setupViewToOpenFromListWidget()
-        setupAgendaWidgetFontSize()
         setupAgendaWidgetHidePastEvents()
         setupDimEvents()
         setupDimCompletedTasks()
@@ -849,25 +849,33 @@ class SettingsActivity : SimpleActivity() {
     }
 
     private fun setupFontSize() = binding.apply {
-        settingsFontSize.text = getFontSizeText()
+        settingsFontSize.text = widgetFontSizeText()
         settingsFontSizeHolder.setOnClickListener {
             val items = arrayListOf(
+                RadioItem(FONT_SIZE_EXTRA_SMALL, getString(R.string.extra_small)),
                 RadioItem(FONT_SIZE_SMALL, getString(org.fossify.commons.R.string.small)),
                 RadioItem(FONT_SIZE_MEDIUM, getString(org.fossify.commons.R.string.medium)),
                 RadioItem(FONT_SIZE_LARGE, getString(org.fossify.commons.R.string.large)),
-                RadioItem(
-                    FONT_SIZE_EXTRA_LARGE,
-                    getString(org.fossify.commons.R.string.extra_large)
-                )
+                RadioItem(FONT_SIZE_EXTRA_LARGE, getString(org.fossify.commons.R.string.extra_large))
             )
 
             RadioGroupDialog(this@SettingsActivity, items, config.fontSize) {
                 config.fontSize = it as Int
-                settingsFontSize.text = getFontSizeText()
+                settingsFontSize.text = widgetFontSizeText()
                 updateWidgets()
             }
         }
     }
+
+    private fun widgetFontSizeText() = getString(
+        when (config.fontSize) {
+            FONT_SIZE_EXTRA_SMALL -> R.string.extra_small
+            FONT_SIZE_SMALL -> org.fossify.commons.R.string.small
+            FONT_SIZE_MEDIUM -> org.fossify.commons.R.string.medium
+            FONT_SIZE_LARGE -> org.fossify.commons.R.string.large
+            else -> org.fossify.commons.R.string.extra_large
+        }
+    )
 
     private fun setupCustomizeWidgetColors() {
         binding.settingsWidgetColorCustomizationHolder.setOnClickListener {
@@ -917,37 +925,11 @@ class SettingsActivity : SimpleActivity() {
         }
     )
 
-    private fun setupAgendaWidgetFontSize() = binding.apply {
-        settingsAgendaWidgetFontSize.text = getAgendaWidgetFontSizeText()
-        settingsAgendaWidgetFontSizeHolder.setOnClickListener {
-            val items = arrayListOf(
-                RadioItem(FONT_SIZE_SMALL, getString(org.fossify.commons.R.string.small)),
-                RadioItem(FONT_SIZE_MEDIUM, getString(org.fossify.commons.R.string.medium)),
-                RadioItem(FONT_SIZE_LARGE, getString(org.fossify.commons.R.string.large)),
-                RadioItem(FONT_SIZE_EXTRA_LARGE, getString(org.fossify.commons.R.string.extra_large))
-            )
-            RadioGroupDialog(this@SettingsActivity, items, config.agendaWidgetFontSize) {
-                config.agendaWidgetFontSize = it as Int
-                settingsAgendaWidgetFontSize.text = getAgendaWidgetFontSizeText()
-                updateWidgets()
-            }
-        }
-    }
-
-    private fun getAgendaWidgetFontSizeText() = getString(
-        when (config.agendaWidgetFontSize) {
-            FONT_SIZE_SMALL -> org.fossify.commons.R.string.small
-            FONT_SIZE_MEDIUM -> org.fossify.commons.R.string.medium
-            FONT_SIZE_LARGE -> org.fossify.commons.R.string.large
-            else -> org.fossify.commons.R.string.extra_large
-        }
-    )
-
     private fun setupAgendaWidgetHidePastEvents() = binding.apply {
-        settingsAgendaWidgetHidePastEvents.isChecked = config.agendaWidgetHidePastEvents
+        settingsAgendaWidgetHidePastEvents.isChecked = config.hidePastEventsInWidgets
         settingsAgendaWidgetHidePastEventsHolder.setOnClickListener {
             settingsAgendaWidgetHidePastEvents.toggle()
-            config.agendaWidgetHidePastEvents = settingsAgendaWidgetHidePastEvents.isChecked
+            config.hidePastEventsInWidgets = settingsAgendaWidgetHidePastEvents.isChecked
             updateWidgets()
         }
     }

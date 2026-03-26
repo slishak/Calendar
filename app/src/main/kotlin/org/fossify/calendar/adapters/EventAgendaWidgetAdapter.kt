@@ -22,8 +22,8 @@ class EventAgendaWidgetAdapter(val context: Context, val intent: Intent) : Remot
     private var weakTextColor = textColor.adjustAlpha(MEDIUM_ALPHA)
     private var dimPastEvents = context.config.dimPastEvents
     private var dimCompletedTasks = context.config.dimCompletedTasks
-    private var hidePastEvents = context.config.agendaWidgetHidePastEvents
-    private var mediumFontSize = context.getAgendaWidgetFontSize()
+    private var hidePastEvents = context.config.hidePastEventsInWidgets
+    private var mediumFontSize = context.getWidgetFontSize()
     private var smallFontSize = mediumFontSize - 2f
 
     init {
@@ -35,8 +35,8 @@ class EventAgendaWidgetAdapter(val context: Context, val intent: Intent) : Remot
         weakTextColor = textColor.adjustAlpha(MEDIUM_ALPHA)
         dimPastEvents = context.config.dimPastEvents
         dimCompletedTasks = context.config.dimCompletedTasks
-        hidePastEvents = context.config.agendaWidgetHidePastEvents
-        mediumFontSize = context.getAgendaWidgetFontSize()
+        hidePastEvents = context.config.hidePastEventsInWidgets
+        mediumFontSize = context.getWidgetFontSize()
         smallFontSize = mediumFontSize - 2f
     }
 
